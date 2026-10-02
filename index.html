@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بوابة الطالب - منصة أ / عبدالعزيز الفيفي ثانوية الأمير عبدالمجيد 😉</title>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <!-- Chart.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --accent: #0284c7;
+            --text-main: #1e293b;
+            --text-sub: #64748b;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            direction: rtl;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+        }
+
+        /* شاشة تسجيل الدخول */
+        .auth-card {
+            background: white;
+            padding: 40px 30px;
+            border-radius: 20px;
+            max-width: 420px;
+            margin: 50px auto;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .auth-card h2 { color: var(--accent); margin-bottom: 20px; }
+        .input-group { margin-bottom: 15px; text-align: right; }
+        .input-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem; color: var(--text-sub); }
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            box-sizing: border-box;
+            outline: none;
+            font-size: 0.95rem;
+        }
+        .input-group input:focus { border-color: var(--accent); }
+        .btn-auth {
+            width: 100%;
+            padding: 12px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: 0.3s;
+        }
+        .btn-auth:hover { background: #0369a1; }
+        .toggle-auth { margin-top: 15px; font-size: 0.85rem; color: var(--text-sub); cursor: pointer; text-decoration: underline; }
+
+        /* اللوحة الخاصة بالطالب */
+        .dashboard { display: none; }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            padding: 25px 30px;
+            border-radius: 20px;
+            margin-bottom: 25px;
+            border-bottom: 5px solid var(--accent);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.03);
+        }
+        .header h1 { margin: 0; color: var(--accent); font-size: 1.5rem; }
+        .btn-logout {
+            background: #fee2e2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+            padding: 8px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+        .stat-card h3 { margin: 0; font-size: 0.9rem; color: var(--text-sub); }
+        .stat-card p { margin: 10px 0 0; font-size: 1.6rem; font-weight: bold; color: var(--accent); }
+
+        .time-box {
+            display: flex;
+            gap: 10px;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            background: #ffffff;
+            padding: 15px;
+            border-radius: 15px;
+            border: 1px solid #e2e8f0;
+            font-size: 0.9rem;
+        }
+        .time-item { flex: 1; text-align: center; }
+        .time-item span { display: block; font-weight: bold; margin-top: 5px; color: var(--accent); }
+
+        .trend-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.95rem;
+            margin-bottom: 20px;
+        }
+        .trend-up { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+        .trend-down { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+        .trend-flat { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+
+        .chart-box {
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            height: 320px;
+            margin-bottom: 25px;
+        }
+
+        .table-box {
+            background: white;
+            border-radius: 20px;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+        }
+        table { width: 100%; border-collapse: collapse; text-align: right; }
+        th { background: #f8fafc; padding: 15px; color: var(--text-sub); border-bottom: 2px solid var(--border); font-size: 0.85rem; }
+        td { padding: 12px 15px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+        tbody tr:hover { background-color: #f8fafc; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- شاشة الدخول والتسجيل -->
+    <div class="auth-card" id="auth-section">
+        <h2 id="auth-title">تسجيل دخول الطالب</h2>
+        <div class="input-group" id="name-group" style="display: none;">
+            <label>اسم الطالب الرباعي</label>
+            <input type="text" id="auth-name" placeholder="أدخل اسمك الكامل">
+        </div>
+        <div class="input-group">
+            <label>البريد الإلكتروني</label>
+            <input type="email" id="auth-email" placeholder="example@school.com">
+        </div>
+        <div class="input-group">
+            <label>كلمة المرور</label>
+            <input type="password" id="auth-password" placeholder="••••••••">
+        </div>
+        <button class="btn-auth" id="btn-submit" onclick="handleAuth()">دخول</button>
+        <div class="toggle-auth" onclick="toggleAuthMode()" id="auth-toggle">ليس لديك حساب؟ إنشاء حساب جديد</div>
+    </div>
+
+    <!-- لوحة الطالب المخصصة -->
+    <div class="dashboard" id="student-dashboard">
+        <div class="header">
+            <div>
+                <h1 id="welcome-msg">مرحباً بك</h1>
+                <span style="color: var(--text-sub); font-size: 0.9rem;">ثانوية الأمير عبدالمجيد - الكفايات اللغوية 😉</span>
+            </div>
+            <button class="btn-logout" onclick="logout()">تسجيل الخروج</button>
+        </div>
+
+        <!-- ملخص الإحصائيات -->
+        <div class="stats-grid">
+            <div class="stat-card"><h3>عدد الاختبارات المنجزة</h3><p id="total-tests">0</p></div>
+            <div class="stat-card"><h3>المتوسط العام</h3><p id="avg-score">0%</p></div>
+            <div class="stat-card"><h3>أعلى نتيجة</h3><p id="max-score">0%</p></div>
+        </div>
+
+        <!-- المواعيد وتتبع المستوى -->
+        <div class="time-box">
+            <div class="time-item">
+                🕒 آخر اختبار تم تقديمه:
+                <span id="last-test-time">-</span>
+            </div>
+            <div class="time-item" style="border-right:1px solid #e2e8f0;">
+                📅 موعد الاختبار القادم:
+                <span id="next-test-time" style="color:#059669;">-</span>
+            </div>
+        </div>
+
+        <div id="trend-indicator-box" style="text-align: center;"></div>
+
+        <!-- رسم بياني لتقدم الطالب -->
+        <div class="chart-box">
+            <canvas id="studentProgressChart"></canvas>
+        </div>
+
+        <!-- جدول اختبارات الطالب فقط -->
+        <h3 style="margin-bottom: 12px; color: var(--text-main);">📋 سجل الاختبارات التي أكملتها:</h3>
+        <div class="table-box">
+            <table>
+                <thead>
+                    <tr>
+                        <th>اسم النموذج / الاختبار</th>
+                        <th style="text-align:center;">التاريخ والتوقيت</th>
+                        <th style="text-align:center;">الدرجة</th>
+                        <th style="text-align:center;">النسبة والتصنيف</th>
+                    </tr>
+                </thead>
+                <tbody id="student-records-rows"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // إعدادات Firebase الخاصة بك
+    const firebaseConfig = {
+        apiKey: "AIzaSyBkCO7FDQXd89YDf843J4_AtvEFvzzt-R0",
+        authDomain: "aztlg-494c3.firebaseapp.com",
+        projectId: "aztlg-494c3",
+        storageBucket: "aztlg-494c3.firebasestorage.app",
+        messagingSenderId: "597051893949",
+        appId: "1:597051893949:web:de5554ac900317a92b2fd4"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    let isSignUpMode = false;
+    let studentLineChart = null;
+
+    // مراقبة حالة تسجيل الدخول
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            document.getElementById('auth-section').style.display = 'none';
+            document.getElementById('student-dashboard').style.display = 'block';
+            loadStudentData(user.email, user.displayName);
+        } else {
+            document.getElementById('auth-section').style.display = 'block';
+            document.getElementById('student-dashboard').style.display = 'none';
+        }
+    });
+
+    function toggleAuthMode() {
+        isSignUpMode = !isSignUpMode;
+        document.getElementById('name-group').style.display = isSignUpMode ? 'block' : 'none';
+        document.getElementById('auth-title').innerText = isSignUpMode ? 'حساب جديد للطالب' : 'تسجيل دخول الطالب';
+        document.getElementById('btn-submit').innerText = isSignUpMode ? 'تسجيل حساب' : 'دخول';
+        document.getElementById('auth-toggle').innerText = isSignUpMode ? 'لديك حساب بالفعل؟ تسجيل الدخول' : 'ليس لديك حساب؟ إنشاء حساب جديد';
+    }
+
+    async function handleAuth() {
+        const email = document.getElementById('auth-email').value.trim();
+        const password = document.getElementById('auth-password').value.trim();
+        const name = document.getElementById('auth-name').value.trim();
+
+        if (!email || !password) {
+            alert('يرجى كتابة البريد الإلكتروني وكلمة المرور.');
+            return;
+        }
+
+        try {
+            if (isSignUpMode) {
+                if (!name) { alert('يرجى كتابة الاسم الكامل'); return; }
+                const res = await auth.createUserWithEmailAndPassword(email, password);
+                await res.user.updateProfile({ displayName: name });
+                location.reload();
+            } else {
+                await auth.signInWithEmailAndPassword(email, password);
+            }
+        } catch (err) {
+            alert('خطأ: ' + err.message);
+        }
+    }
+
+    function logout() {
+        auth.signOut();
+    }
+
+    // جلب النتائج الخاصة ببريد الطالب الحالى فقط
+    function loadStudentData(userEmail, displayName) {
+        document.getElementById('welcome-msg').innerText = `مرحباً بك، ${displayName || 'طالبنا العزيز'} 👋`;
+
+        db.collection("alkfaeat_results")
+          .where("email", "==", userEmail)
+          .orderBy("time", "asc")
+          .onSnapshot(snapshot => {
+              let records = [];
+              snapshot.forEach(doc => {
+                  records.push({ id: doc.id, ...doc.data() });
+              });
+
+              renderStudentDashboard(records);
+          });
+    }
+
+    function renderStudentDashboard(records) {
+        if (records.length === 0) {
+            document.getElementById('student-records-rows').innerHTML = `<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-sub);">لا توجد اختبارات مسجلة لك حتى الآن.</td></tr>`;
+            document.getElementById('total-tests').innerText = "0";
+            document.getElementById('avg-score').innerText = "0%";
+            document.getElementById('max-score').innerText = "0%";
+            document.getElementById('last-test-time').innerText = "-";
+            document.getElementById('next-test-time').innerText = "-";
+            document.getElementById('trend-indicator-box').innerHTML = "";
+            return;
+        }
+
+        let totalScore = 0;
+        let percentages = [];
+        let labels = [];
+        let barColors = [];
+        let rowsHtml = "";
+
+        records.forEach(rec => {
+            let mName = rec.model_id || 'الجملة الاسمية';
+            let pct = Math.round((rec.score / rec.total) * 100);
+            let grade = getGradeInfo(pct);
+            let formattedTime = formatDateTime(rec.time);
+
+            percentages.push(pct);
+            labels.push(mName);
+            barColors.push(grade.color);
+            totalScore += pct;
+
+            rowsHtml += `
+                <tr>
+                    <td><b>${mName}</b></td>
+                    <td style="text-align:center; color:var(--text-sub); font-size:0.85rem;">${formattedTime}</td>
+                    <td style="text-align:center; color:var(--accent); font-weight:bold;">${rec.score} من ${rec.total}</td>
+                    <td style="text-align:center;"><span style="font-weight:bold; color:${grade.color}; padding:4px 10px; background:${grade.bg}; border-radius:12px;">${pct}% (${grade.text})</span></td>
+                </tr>
+            `;
+        });
+
+        document.getElementById('student-records-rows').innerHTML = rowsHtml;
+
+        // تحديث الإحصائيات
+        let avg = Math.round(totalScore / records.length);
+        let max = Math.max(...percentages);
+
+        document.getElementById('total-tests').innerText = records.length;
+        document.getElementById('avg-score').innerText = avg + "%";
+        document.getElementById('max-score').innerText = max + "%";
+
+        // توقيتات الاختبارات
+        let lastRecord = records[records.length - 1];
+        document.getElementById('last-test-time').innerText = formatDateTime(lastRecord.time);
+        document.getElementById('next-test-time').innerText = getNextTestTime(lastRecord.time);
+
+        // مؤشر التطور
+        const indicatorBox = document.getElementById('trend-indicator-box');
+        if (records.length > 1) {
+            let firstScore = percentages[0];
+            let lastScore = percentages[percentages.length - 1];
+            let diff = lastScore - firstScore;
+
+            if (diff > 0) {
+                indicatorBox.innerHTML = `<span class="trend-badge trend-up">📈 أداء رائع! لديك تقدم ملحوظ بمقدار +${diff}% مقارنة بأول اختبار</span>`;
+            } else if (diff < 0) {
+                indicatorBox.innerHTML = `<span class="trend-badge trend-down">📉 تراجع في المستوى بمقدار ${diff}%، واصل المذاكرة لاستعادة التميز</span>`;
+            } else {
+                indicatorBox.innerHTML = `<span class="trend-badge trend-flat">➖ مستوى ثابت بمتوسط ${lastScore}%</span>`;
+            }
+        } else {
+            let singleGrade = getGradeInfo(percentages[0]);
+            indicatorBox.innerHTML = `<span class="trend-badge" style="background:${singleGrade.bg}; color:${singleGrade.color};">📌 تصنيف مستواك الحالي: ${singleGrade.text}</span>`;
+        }
+
+        // رسم منحنى التقدم
+        drawStudentChart(labels, percentages, barColors);
+    }
+
+    function drawStudentChart(labels, percentages, colors) {
+        const ctx = document.getElementById('studentProgressChart').getContext('2d');
+        if (studentLineChart) studentLineChart.destroy();
+
+        studentLineChart = new Chart(ctx, {
+            type: labels.length === 1 ? 'bar' : 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'نسبة الإنجاز %',
+                    data: percentages,
+                    borderColor: '#0284c7',
+                    backgroundColor: labels.length === 1 ? colors : 'rgba(2, 132, 199, 0.15)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 6,
+                    pointBackgroundColor: '#0284c7'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    }
+
+    function getGradeInfo(pct) {
+        if(pct >= 90) return { text: "ممتاز 🟢", color: "#166534", bg: "#dcfce7" };
+        if(pct >= 80) return { text: "جيد جداً 🔵", color: "#0284c7", bg: "#e0f2fe" };
+        if(pct >= 70) return { text: "جيد 🟡", color: "#b45309", bg: "#fef3c7" };
+        if(pct >= 60) return { text: "مقبول 🟠", color: "#d97706", bg: "#ffedd5" };
+        return { text: "ضعيف 🔴", color: "#dc2626", bg: "#fee2e2" };
+    }
+
+    function formatDateTime(timeVal) {
+        if (!timeVal) return "غير مسجل";
+        let dateObj = timeVal.toDate ? timeVal.toDate() : new Date(timeVal);
+        return dateObj.toLocaleString('ar-SA', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    function getNextTestTime(timeVal) {
+        if (!timeVal) return "يحدد لاحقاً";
+        let dateObj = timeVal.toDate ? timeVal.toDate() : new Date(timeVal);
+        dateObj.setDate(dateObj.getDate() + 7);
+        return dateObj.toLocaleDateString('ar-SA', { weekday: 'long', day: 'numeric', month: 'short' });
+    }
+</script>
+</body>
+</html>
