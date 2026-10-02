@@ -168,9 +168,9 @@
     <!-- شاشة إدخال البريد الإلكتروني -->
     <div class="search-card" id="search-section">
         <h2>📊 استعلام عن نتائج الطالب</h2>
-        <p>أدخل بريدك الإلكتروني المسجل للاطلاع على درجاتك وتطور مستواك</p>
+        <p>أدخل إيميل مدرستي الخاص بك للاطلاع على درجاتك وتطور مستواك</p>
         <div class="input-group">
-            <input type="email" id="student-email-input" placeholder="example@gmail.com" dir="ltr">
+            <input type="text" id="student-email-input" placeholder="مثال: S5649427@rb.moe.gov.sa" dir="ltr">
         </div>
         <button class="btn-search" onclick="fetchStudentResults()">عرض نتائج الاختبارات</button>
         <div id="error-msg" style="color: #dc2626; font-size: 0.85rem; margin-top: 12px; display: none;"></div>
@@ -183,7 +183,7 @@
                 <h1 id="student-name-display">مرحباً بك</h1>
                 <span style="color: var(--text-sub); font-size: 0.85rem;" id="student-email-display"></span>
             </div>
-            <button class="btn-reset" onclick="resetSearch()">بحث عن بريد آخر 🔍</button>
+            <button class="btn-reset" onclick="resetSearch()">بحث عن إيميل آخر 🔍</button>
         </div>
 
         <!-- ملخص الإحصائيات -->
@@ -231,7 +231,7 @@
 </div>
 
 <script>
-    // إعدادات Firebase الخاصة بمرجعك
+    // إعدادات Firebase الخاصة بالمشروع
     const firebaseConfig = {
         apiKey: "AIzaSyBkCO7FDQXd89YDf843J4_AtvEFvzzt-R0",
         authDomain: "aztlg-494c3.firebaseapp.com",
@@ -246,37 +246,68 @@
     let studentLineChart = null;
 
     async function fetchStudentResults() {
-        const emailInput = document.getElementById('student-email-input').value.trim().toLowerCase();
+        const rawInput = document.getElementById('student-email-input').value.trim().toLowerCase();
         const errorDiv = document.getElementById('error-msg');
         errorDiv.style.display = 'none';
 
-        if (!emailInput) {
-            showError("يرجى إدخال البريد الإلكتروني أولاً.");
+        if (!rawInput) {
+            showError("يرجى إدخال إيميل مدرستي الخاص بك أولاً.");
             return;
         }
 
+        // استخراج الرقم المدمج بالإيميل (مثال: يستخرج 5649427 من S5649427@rb.moe.gov.sa)
+        let studentNumber = "";
+        const idMatch = rawInput.match(/s?(\d+)/i);
+        if (idMatch && idMatch[1]) {
+            studentNumber = idMatch[1];
+        }
+
         try {
-            // الاستعلام عن نتائج هذا الإيميل فقط
-            const snapshot = await db.collection("alkfaeat_results")
-                                     .where("email", "==", emailInput)
-                                     .orderBy("time", "asc")
-                                     .get();
+            // جلب السجلات وتصفيتها محلياً لتفادي مشاكل الفهرسة والتوافق
+            const snapshot = await db.collection("alkfaeat_results").get();
 
             if (snapshot.empty) {
-                showError("لم يتم العثور على أي نتائج مسجلة بهذا البريد الإلكتروني. التأكد من إدخال الإيميل الصحيح.");
+                showError("لا توجد أي نتائج مسجلة في المنصة حالياً.");
                 return;
             }
 
             let records = [];
             snapshot.forEach(doc => {
-                records.push({ id: doc.id, ...doc.data() });
+                const data = doc.data();
+                
+                const docEmail = (data.email || "").toLowerCase();
+                const docName = (data.name || "").toLowerCase();
+
+                // التحقق من المطابقة:
+                // 1. مطابقة الإيميل الكامل
+                // 2. مطابقة الرقم المستخرج مع الإيميل أو الاسم في قاعدة البيانات
+                // 3. مطابقة جزء من الإيميل/الاسم
+                const isMatchByEmail = docEmail && docEmail === rawInput;
+                const isMatchByID = studentNumber && (docName.includes(studentNumber) || docEmail.includes(studentNumber));
+                const isMatchByName = docName && docName.includes(rawInput);
+
+                if (isMatchByEmail || isMatchByID || isMatchByName) {
+                    records.push({ id: doc.id, ...data });
+                }
             });
 
-            // عرض البيانات
+            // ترتيب السجلات زمنياً
+            records.sort((a, b) => {
+                let tA = a.time ? (a.time.toDate ? a.time.toDate() : new Date(a.time)) : 0;
+                let tB = b.time ? (b.time.toDate ? b.time.toDate() : new Date(b.time)) : 0;
+                return tA - tB;
+            });
+
+            if (records.length === 0) {
+                showError("لم يتم العثور على أي نتائج مسجلة لهذا الإيميل. التأكد من كِتابته بشكل صحيح.");
+                return;
+            }
+
+            // إخفاء البحث وعرض نتائج الطالب
             document.getElementById('search-section').style.display = 'none';
             document.getElementById('student-dashboard').style.display = 'block';
 
-            renderStudentDashboard(emailInput, records);
+            renderStudentDashboard(rawInput, records);
 
         } catch (err) {
             console.error(err);
@@ -318,7 +349,6 @@
 
         document.getElementById('student-records-rows').innerHTML = rowsHtml;
 
-        // الإحصائيات
         let avg = Math.round(totalScore / records.length);
         let max = Math.max(...percentages);
 
@@ -326,12 +356,10 @@
         document.getElementById('avg-score').innerText = avg + "%";
         document.getElementById('max-score').innerText = max + "%";
 
-        // التواريخ
         let lastRecord = records[records.length - 1];
         document.getElementById('last-test-time').innerText = formatDateTime(lastRecord.time);
         document.getElementById('next-test-time').innerText = getNextTestTime(lastRecord.time);
 
-        // شارة المستوى
         const indicatorBox = document.getElementById('trend-indicator-box');
         if (records.length > 1) {
             let firstScore = percentages[0];
@@ -341,7 +369,7 @@
             if (diff > 0) {
                 indicatorBox.innerHTML = `<span class="trend-badge trend-up">📈 أداء ممتاز! لديك تقدم بمقدار +${diff}% مقارنة بأول اختبار</span>`;
             } else if (diff < 0) {
-                indicatorBox.innerHTML = `<span class="trend-badge trend-down">📉 تراجع في المستوى بمقدار ${diff}%، يحتاج إلى مزيد من التركيز</span>`;
+                indicatorBox.innerHTML = `<span class="trend-badge trend-down">📉 تراجع في المستوى بمقدار ${diff}%، واصل المراجعة لمستوى أفضل</span>`;
             } else {
                 indicatorBox.innerHTML = `<span class="trend-badge trend-flat">➖ مستوى ثابت بمتوسط ${lastScore}%</span>`;
             }
@@ -350,7 +378,6 @@
             indicatorBox.innerHTML = `<span class="trend-badge" style="background:${singleGrade.bg}; color:${singleGrade.color};">📌 تصنيف مستواك الحالي: ${singleGrade.text}</span>`;
         }
 
-        // رسم منحنى الأداء
         drawStudentChart(labels, percentages, barColors);
     }
 
