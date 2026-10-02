@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>بوابة استعلام الطالب - الكفايات اللغوية 😉</title>
+    <title>بوابة استعلام الطالب - ثانوية الأمير عبدالمجيد 😉</title>
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -174,7 +174,6 @@
         }
         .btn-review:hover { background: #16a34a; color: white; }
 
-        /* نافذة المراجعة */
         #review-modal {
             display: none;
             position: fixed;
@@ -217,15 +216,15 @@
 <body>
 
 <div class="container">
-    <!-- شاشة الاستعلام -->
+    <!-- شاشة البحث -->
     <div class="search-card" id="search-section">
-        <h2>📊 استعلام عن نتائج الطالب</h2>
-        <p>أدخل اسمك أو إيميل منصة مدرستي للاطلاع على نتائجك ومراجعة إجاباتك</p>
+        <h2>📊 استعلام نتائج الطالب</h2>
+        <p>أدخل اسمك أو إيميلك المسجل للاطلاع على اللوحة الخاصة بك</p>
         <div class="input-group">
-            <input type="text" id="student-search-input" placeholder="اكتب اسم الطالب أو الإيميل هنا..." dir="auto">
+            <input type="text" id="student-search-input" placeholder="اكتب اسم الطالب أو الإيميل..." dir="auto">
         </div>
-        <button class="btn-search" id="search-btn" onclick="fetchStudentResults()">عرض نتائج التقييم</button>
-        <div id="error-msg" style="color: #dc2626; font-size: 0.88rem; margin-top: 12px; display: none;"></div>
+        <button class="btn-search" id="search-btn" onclick="fetchStudentResults()">عرض التقرير</button>
+        <div id="error-msg" style="color: #dc2626; font-size: 0.88rem; margin-top: 12px; display: none; background: #fee2e2; padding: 10px; border-radius: 8px;"></div>
     </div>
 
     <!-- لوحة نتائج الطالب -->
@@ -235,17 +234,15 @@
                 <h1 id="student-name-display">مرحباً بك</h1>
                 <span style="color: var(--text-sub); font-size: 0.85rem;" id="student-info-display">ثانوية الأمير عبدالمجيد 😉</span>
             </div>
-            <button class="btn-reset" onclick="resetSearch()">بحث آخر 🔍</button>
+            <button class="btn-reset" onclick="resetSearch()">بحث عن حساب آخر 🔍</button>
         </div>
 
-        <!-- ملخص الإحصائيات -->
         <div class="stats-grid">
             <div class="stat-card"><h3>عدد الاختبارات المكتملة</h3><p id="total-tests">0</p></div>
             <div class="stat-card"><h3>المتوسط العام</h3><p id="avg-score">0%</p></div>
             <div class="stat-card"><h3>أعلى نتيجة</h3><p id="max-score">0%</p></div>
         </div>
 
-        <!-- المواعيد وتتبع المستوى -->
         <div class="time-box">
             <div class="time-item">
                 🕒 آخر اختبار تم تقديمه:
@@ -259,12 +256,10 @@
 
         <div id="trend-indicator-box" style="text-align: center;"></div>
 
-        <!-- الرسم البياني لتقدم الطالب -->
         <div class="chart-box">
             <canvas id="studentProgressChart"></canvas>
         </div>
 
-        <!-- جدول اختبارات الطالب -->
         <h3 style="margin-bottom: 12px; color: var(--text-main);">📋 سجل الاختبارات والتغذية الراجعة:</h3>
         <div class="table-box">
             <table>
@@ -283,7 +278,6 @@
     </div>
 </div>
 
-<!-- نافذة المراجعة والتغذية الراجعة -->
 <div id="review-modal">
     <div class="modal-content">
         <h3 id="review-title" style="margin-top:0; color:var(--accent);">👁️ مراجعة إجابات الاختبار</h3>
@@ -317,48 +311,49 @@
         errorDiv.style.display = 'none';
 
         if (!rawInput) {
-            showError("يرجى كتابة اسمك أو إيميلك أولاً.");
+            showError("يرجى إدخال اسم الطالب أو بريده الإلكتروني.");
             return;
         }
 
         searchBtn.disabled = true;
-        searchBtn.innerText = "جاري الاتصال بالسحابة...";
+        searchBtn.innerText = "جاري جلب النتائج من السحابة...";
 
-        // استخراج أرقام الهوية أو الطالب من إيميل مدرستي لو وُجدت
+        // استخراج الأرقام من المدخل
         let studentNumber = "";
-        const idMatch = rawInput.match(/s?(\d+)/i);
-        if (idMatch && idMatch[1]) {
-            studentNumber = idMatch[1];
+        const idMatch = rawInput.match(/\d+/);
+        if (idMatch) {
+            studentNumber = idMatch[0];
         }
 
-        try {
-            const snapshot = await db.collection("alkfaeat_results").get();
+        // تجربة أكثر من مجموعة سحابية لضمان قراءة البيانات
+        const collectionsToTry = ["alkfaeat_results", "results", "quiz_results"];
+        loadedStudentRecords = [];
 
-            if (snapshot.empty) {
-                showError("لا توجد أي نتائج مسجلة في السحابة حالياً.");
-                searchBtn.disabled = false;
-                searchBtn.innerText = "عرض نتائج التقييم";
-                return;
+        try {
+            for (let colName of collectionsToTry) {
+                try {
+                    const snapshot = await db.collection(colName).get();
+                    if (!snapshot.empty) {
+                        snapshot.forEach(doc => {
+                            const data = doc.data();
+                            const docEmail = String(data.email || "").toLowerCase().trim();
+                            const docName = String(data.name || "").toLowerCase().trim();
+
+                            const isMatchByEmail = docEmail && (docEmail === rawInput || docEmail.includes(rawInput));
+                            const isMatchByID = studentNumber && (docName.includes(studentNumber) || docEmail.includes(studentNumber));
+                            const isMatchByName = docName && (docName.includes(rawInput) || rawInput.includes(docName));
+
+                            if (isMatchByEmail || isMatchByID || isMatchByName) {
+                                loadedStudentRecords.push({ id: doc.id, ...data });
+                            }
+                        });
+                    }
+                } catch(e) {
+                    console.log("Collection check failed for: " + colName);
+                }
             }
 
-            loadedStudentRecords = [];
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                
-                const docEmail = String(data.email || "").toLowerCase().trim();
-                const docName = String(data.name || "").toLowerCase().trim();
-
-                // التحقق الذكي من المطابقة:
-                const isMatchByEmail = docEmail && (docEmail === rawInput || docEmail.includes(rawInput));
-                const isMatchByID = studentNumber && (docName.includes(studentNumber) || docEmail.includes(studentNumber));
-                const isMatchByName = docName && (docName.includes(rawInput) || rawInput.includes(docName));
-
-                if (isMatchByEmail || isMatchByID || isMatchByName) {
-                    loadedStudentRecords.push({ id: doc.id, ...data });
-                }
-            });
-
-            // ترتيب السجلات زمنياً من القديم إلى الحديث
+            // ترتيب السجلات زمنياً
             loadedStudentRecords.sort((a, b) => {
                 let tA = a.time ? (a.time.toDate ? a.time.toDate() : new Date(a.time)) : 0;
                 let tB = b.time ? (b.time.toDate ? b.time.toDate() : new Date(b.time)) : 0;
@@ -366,9 +361,9 @@
             });
 
             if (loadedStudentRecords.length === 0) {
-                showError("لم نتمكن من العثور على نتائج تطابق مدخلاتك. جرب كتابة اسمك كما هو مدخل في لوحة المعلم.");
+                showError("لم يتم العثور على أي نتائج مطابقة في السحابة. يرجى تجربة كتابة **اسم الطالب** كما هو مسجل في اللوحة الرئيسية.");
                 searchBtn.disabled = false;
-                searchBtn.innerText = "عرض نتائج التقييم";
+                searchBtn.innerText = "عرض التقرير";
                 return;
             }
 
@@ -379,17 +374,17 @@
 
         } catch (err) {
             console.error("Firestore Error:", err);
-            showError("حدث خطأ أثناء الاتصال بالسحابة: " + err.message);
+            showError("خطأ في الاتصال بالسحابة: " + (err.message || "تأكد من قواعد الحماية قواعد البيانات Firebase Firestore"));
         } finally {
             searchBtn.disabled = false;
-            searchBtn.innerText = "عرض نتائج التقييم";
+            searchBtn.innerText = "عرض التقرير";
         }
     }
 
     function renderStudentDashboard(searchInput, records) {
         let studentName = records[records.length - 1].name || "عزيزي الطالب";
         document.getElementById('student-name-display').innerText = `👤 مرحباً بك: ${studentName}`;
-        document.getElementById('student-info-display').innerText = `ثانوية الأمير عبدالمجيد - النتائج المفتوحة (${records.length} اختبارات)`;
+        document.getElementById('student-info-display').innerText = `ثانوية الأمير عبدالمجيد - التقرير الشامل (${records.length} اختبارات)`;
 
         let totalScore = 0;
         let percentages = [];
@@ -398,7 +393,7 @@
         let rowsHtml = "";
 
         records.forEach((rec, index) => {
-            let mName = rec.model_id || 'الجملة الاسمية';
+            let mName = rec.model_id || 'الكفايات اللغوية';
             let pct = Math.round((rec.score / rec.total) * 100);
             let grade = getGradeInfo(pct);
             let formattedTime = formatDateTime(rec.time);
@@ -459,7 +454,7 @@
         const record = loadedStudentRecords[recordIndex];
         if (!record) return;
 
-        const mName = record.model_id || 'الجملة الاسمية';
+        const mName = record.model_id || 'الكفايات اللغوية';
         document.getElementById('review-title').innerText = `👁️ التغذية الراجعة: نموذج (${mName})`;
         
         const listContainer = document.getElementById('review-list');
@@ -507,6 +502,4 @@
                     pointBackgroundColor: '#0284c7'
                 }]
             },
-            options: {
-                responsive: true,
-                maintainAs
+            opti
