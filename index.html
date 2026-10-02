@@ -195,9 +195,9 @@
 <div class="container">
     <!-- شاشة إدخال البريد الإلكتروني -->
     <div class="search-card" id="searchSection">
-        <h2>🔒 استعلام نتائج الطالب</h2>
-        <p>أدخل البريد الإلكتروني (إيميل مدرستي) الخـاص بك للوصول لنتائجك</p>
-        <input type="email" id="searchInput" placeholder="Sxxxxxxx@rb.moe.gov.sa" autocomplete="off">
+        <h2>🔒 بوابة نتائج الطالب</h2>
+        <p>أدخل البريد الإلكتروني (إيميل منصة مدرستي) الخـاص بك للوصول لنتائجك</p>
+        <input type="email" id="searchInput" placeholder="s5807776@rb.moe.gov.sa" autocomplete="off" dir="ltr">
         <button class="btn-search" id="btnSearch" onclick="fetchData()">عرض النتائج</button>
         <div id="errMsg" style="color: #dc2626; margin-top: 12px; font-size: 0.88rem; display: none; background: #fee2e2; padding: 10px; border-radius: 8px;"></div>
     </div>
@@ -264,25 +264,22 @@
     let myChart = null;
 
     async function fetchData() {
-        const queryEmail = document.getElementById('searchInput').value.trim().toLowerCase();
+        const rawInput = document.getElementById('searchInput').value.trim().toLowerCase();
         const err = document.getElementById('errMsg');
         const btn = document.getElementById('btnSearch');
         err.style.display = 'none';
 
-        if (!queryEmail) {
+        if (!rawInput) {
             err.innerText = "يرجى كتابة البريد الإلكتروني الخاص بك أولاً.";
             err.style.display = 'block';
             return;
         }
 
-        // التأكد بسيط من صيغة البريد لمنع كتابة أسماء مجردة
-        if (!queryEmail.includes('@') && !queryEmail.startsWith('s')) {
-            err.innerText = "تنبيه الخصوصية: الاستعلام متاح عبر البريد الإلكتروني فقط (مثل إيميل منصة مدرستي).";
-            err.style.display = 'block';
-            return;
-        }
+        // استخراج أرقام من البريد الإلكتروني المدخل (مثل s5807776 -> 5807776)
+        const idMatch = rawInput.match(/\d+/);
+        const studentNumber = idMatch ? idMatch[0] : "";
 
-        btn.innerText = "جاري البحث بالبريد...";
+        btn.innerText = "جاري جلب النتائج...";
         btn.disabled = true;
 
         try {
@@ -292,9 +289,16 @@
             snap.forEach(doc => {
                 const d = doc.data();
                 const docEmail = String(d.email || "").toLowerCase().trim();
+                const docName = String(d.name || "").toLowerCase().trim();
 
-                // 🛑 المطابقة الحصرية الحساسة: يتم البحث والتطابق فقط بواسطة البريد الإلكتروني (email)
-                if (docEmail && (docEmail === queryEmail || docEmail.startsWith(queryEmail))) {
+                // 🛑 شروط المطابقة الذكية بالبريد والرقم:
+                // 1. تطابق الإيميل كاملاً بغض النظر عن الكابيتال والسمول
+                // 2. تطابق رقم الطالب المدخل مع الإيميل المخزن
+                // 3. احتواء حقل الإيميل المخزن على اسم المستخدم
+                const isEmailMatch = docEmail && (docEmail === rawInput || docEmail.includes(rawInput) || rawInput.includes(docEmail));
+                const isNumberMatch = studentNumber && (docEmail.includes(studentNumber) || docName.includes(studentNumber));
+
+                if (isEmailMatch || isNumberMatch) {
                     studentData.push(d);
                 }
             });
@@ -307,7 +311,7 @@
             });
 
             if (studentData.length === 0) {
-                err.innerText = "لم نتمكن من العثور على أي نتائج مسجلة لهذا البريد الإلكتروني. يرجى التأكد من كتابة الإيميل كما هو مُدخل أثناء الاختبار.";
+                err.innerText = "لم نتمكن من العثور على أي نتائج مسجلة بهذا البريد الإلكتروني. يرجى التأكد من كتابة الإيميل كما هو مُدخل أثناء حل الاختبار.";
                 err.style.display = 'block';
                 btn.innerText = "عرض النتائج";
                 btn.disabled = false;
@@ -317,7 +321,7 @@
             document.getElementById('searchSection').style.display = 'none';
             document.getElementById('dashboardSection').style.display = 'block';
 
-            renderUI(queryEmail);
+            renderUI(rawInput);
 
         } catch (e) {
             console.error(e);
