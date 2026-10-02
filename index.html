@@ -168,9 +168,9 @@
     <!-- شاشة إدخال البريد الإلكتروني -->
     <div class="search-card" id="search-section">
         <h2>📊 استعلام عن نتائج الطالب</h2>
-        <p>أدخل إيميل مدرستي الخاص بك للاطلاع على درجاتك وتطور مستواك</p>
+        <p>أدخل إيميل منصة مدرستي الخاص بك للاطلاع على درجاتك وتطور مستواك</p>
         <div class="input-group">
-            <input type="text" id="student-email-input" placeholder="مثال: S5649427@rb.moe.gov.sa" dir="ltr">
+            <input type="text" id="student-email-input" placeholder="Sxxxxxxx@rb.moe.gov.sa" dir="ltr">
         </div>
         <button class="btn-search" onclick="fetchStudentResults()">عرض نتائج الاختبارات</button>
         <div id="error-msg" style="color: #dc2626; font-size: 0.85rem; margin-top: 12px; display: none;"></div>
@@ -231,7 +231,7 @@
 </div>
 
 <script>
-    // إعدادات Firebase الخاصة بالمشروع
+    // إعدادات Firebase الخاص بمشروعك
     const firebaseConfig = {
         apiKey: "AIzaSyBkCO7FDQXd89YDf843J4_AtvEFvzzt-R0",
         authDomain: "aztlg-494c3.firebaseapp.com",
@@ -251,11 +251,11 @@
         errorDiv.style.display = 'none';
 
         if (!rawInput) {
-            showError("يرجى إدخال إيميل مدرستي الخاص بك أولاً.");
+            showError("يرجى إدخال إيميل منصة مدرستي الخاص بك أولاً.");
             return;
         }
 
-        // استخراج الرقم المدمج بالإيميل (مثال: يستخرج 5649427 من S5649427@rb.moe.gov.sa)
+        // استخراج أرقام الهوية أو الطالب من أي صيغة إيميل إلكتروني تبدأ بـ S
         let studentNumber = "";
         const idMatch = rawInput.match(/s?(\d+)/i);
         if (idMatch && idMatch[1]) {
@@ -263,7 +263,7 @@
         }
 
         try {
-            // جلب السجلات وتصفيتها محلياً لتفادي مشاكل الفهرسة والتوافق
+            // جلب السجلات من السحابة وتصفيتها
             const snapshot = await db.collection("alkfaeat_results").get();
 
             if (snapshot.empty) {
@@ -279,9 +279,6 @@
                 const docName = (data.name || "").toLowerCase();
 
                 // التحقق من المطابقة:
-                // 1. مطابقة الإيميل الكامل
-                // 2. مطابقة الرقم المستخرج مع الإيميل أو الاسم في قاعدة البيانات
-                // 3. مطابقة جزء من الإيميل/الاسم
                 const isMatchByEmail = docEmail && docEmail === rawInput;
                 const isMatchByID = studentNumber && (docName.includes(studentNumber) || docEmail.includes(studentNumber));
                 const isMatchByName = docName && docName.includes(rawInput);
@@ -299,7 +296,7 @@
             });
 
             if (records.length === 0) {
-                showError("لم يتم العثور على أي نتائج مسجلة لهذا الإيميل. التأكد من كِتابته بشكل صحيح.");
+                showError("لم يتم العثور على أي نتائج مسجلة بهذا الإيميل. يرجى التأكد من كتابته بشكل صحيح.");
                 return;
             }
 
