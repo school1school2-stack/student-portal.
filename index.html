@@ -3,287 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>بوابة استعلام الطالب - ثانوية الأمير عبدالمجيد 😉</title>
-    <!-- Firebase SDKs -->
+    <title>بوابة نتائج الطالب - ثانوية الأمير عبدالمجيد 😉</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root {
-            --bg: #f8fafc;
-            --card-bg: #ffffff;
-            --accent: #0284c7;
-            --text-main: #1e293b;
-            --text-sub: #64748b;
-            --border: #e2e8f0;
-            --correct-bg: #dcfce7; --correct-text: #166534;
-            --wrong-bg: #fee2e2; --wrong-text: #991b1b;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg);
-            color: var(--text-main);
-            margin: 0;
-            padding: 20px;
-            direction: rtl;
-        }
-
-        .container {
-            max-width: 1000px;
-            margin: auto;
-        }
-
-        /* صندوق البحث */
-        .search-card {
-            background: white;
-            padding: 35px 25px;
-            border-radius: 20px;
-            max-width: 480px;
-            margin: 40px auto;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-            border: 1px solid var(--border);
-            text-align: center;
-        }
-
-        .search-card h2 { color: var(--accent); margin-top: 0; margin-bottom: 10px; }
-        .search-card p { color: var(--text-sub); font-size: 0.9rem; margin-bottom: 20px; }
-
-        .input-group { margin-bottom: 15px; text-align: right; }
-        .input-group input {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            box-sizing: border-box;
-            outline: none;
-            font-size: 1rem;
-            text-align: center;
-        }
-        .input-group input:focus { border-color: var(--accent); }
-
-        .btn-search {
-            width: 100%;
-            padding: 12px;
-            background: var(--accent);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-        .btn-search:hover { background: #0369a1; }
-
-        /* منطقة لوحة الطالب */
+        :root { --bg: #f8fafc; --accent: #0284c7; --text: #1e293b; --border: #e2e8f0; }
+        body { font-family: system-ui, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 20px; direction: rtl; }
+        .container { max-width: 900px; margin: auto; }
+        
+        /* شاشة البحث */
+        .search-card { background: white; padding: 30px; border-radius: 20px; max-width: 450px; margin: 40px auto; text-align: center; border: 1px solid var(--border); box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+        .search-card input { width: 100%; padding: 12px; margin: 15px 0; border: 1px solid var(--border); border-radius: 10px; box-sizing: border-box; text-align: center; font-size: 1rem; }
+        .search-card button { width: 100%; padding: 12px; background: var(--accent); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 1rem; }
+        
+        /* اللوحة الخاصة بالطالب */
         .dashboard { display: none; }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: white;
-            padding: 20px 25px;
-            border-radius: 20px;
-            margin-bottom: 25px;
-            border-bottom: 5px solid var(--accent);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.03);
-        }
-        .header h1 { margin: 0; color: var(--accent); font-size: 1.4rem; }
-        .btn-reset {
-            background: #f1f5f9;
-            color: var(--text-sub);
-            border: 1px solid var(--border);
-            padding: 8px 16px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 15px;
-            margin-bottom: 25px;
-        }
-        .stat-card {
-            background: white;
-            padding: 20px;
-            border-radius: 15px;
-            text-align: center;
-            border: 1px solid var(--border);
-        }
-        .stat-card h3 { margin: 0; font-size: 0.85rem; color: var(--text-sub); }
-        .stat-card p { margin: 8px 0 0; font-size: 1.5rem; font-weight: bold; color: var(--accent); }
-
-        .time-box {
-            display: flex;
-            gap: 10px;
-            justify-content: space-between;
-            margin-bottom: 20px;
-            background: #ffffff;
-            padding: 15px;
-            border-radius: 15px;
-            border: 1px solid #e2e8f0;
-            font-size: 0.88rem;
-        }
-        .time-item { flex: 1; text-align: center; }
-        .time-item span { display: block; font-weight: bold; margin-top: 5px; color: var(--accent); }
-
-        .trend-badge {
-            display: inline-block;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-weight: bold;
-            font-size: 0.9rem;
-            margin-bottom: 20px;
-        }
-        .trend-up { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
-        .trend-down { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
-        .trend-flat { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
-
-        .chart-box {
-            background: white;
-            padding: 20px;
-            border-radius: 20px;
-            border: 1px solid var(--border);
-            height: 320px;
-            margin-bottom: 25px;
-        }
-
-        .table-box {
-            background: white;
-            border-radius: 20px;
-            overflow-x: auto;
-            border: 1px solid var(--border);
-        }
+        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; border-bottom: 4px solid var(--accent); }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .stat-card { background: white; padding: 15px; border-radius: 12px; text-align: center; border: 1px solid var(--border); }
+        .stat-card p { font-size: 1.5rem; font-weight: bold; color: var(--accent); margin: 5px 0 0; }
+        
+        .chart-box { background: white; padding: 20px; border-radius: 15px; border: 1px solid var(--border); height: 300px; margin-bottom: 20px; }
+        .table-box { background: white; border-radius: 15px; overflow-x: auto; border: 1px solid var(--border); }
         table { width: 100%; border-collapse: collapse; text-align: right; }
-        th { background: #f8fafc; padding: 12px 15px; color: var(--text-sub); border-bottom: 2px solid var(--border); font-size: 0.85rem; }
-        td { padding: 12px 15px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
-
-        .btn-review {
-            color: #16a34a;
-            background: #dcfce7;
-            border: 1px solid #bbf7d0;
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .btn-review:hover { background: #16a34a; color: white; }
-
-        #review-modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.6);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-        .modal-content {
-            background: white;
-            padding: 25px;
-            border-radius: 20px;
-            max-width: 750px;
-            width: 92%;
-            max-height: 85vh;
-            overflow-y: auto;
-            text-align: right;
-        }
-        .answer-card {
-            padding: 15px;
-            border-radius: 12px;
-            margin-bottom: 12px;
-            border: 1px solid var(--border);
-            line-height: 1.6;
-        }
-        .ans-correct { background: var(--correct-bg); color: var(--correct-text); border-color: #bbf7d0; }
-        .ans-wrong { background: var(--wrong-bg); color: var(--wrong-text); border-color: #fecaca; }
-        .close-btn {
-            background: var(--text-main);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 10px;
-            cursor: pointer;
-            margin-top: 15px;
-        }
+        th, td { padding: 12px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+        
+        .btn-review { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        #review-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 20px; border-radius: 15px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; }
+        .ans-card { padding: 10px; border-radius: 8px; margin-bottom: 8px; font-size: 0.9rem; }
+        .correct { background: #dcfce7; color: #166534; }
+        .wrong { background: #fee2e2; color: #991b1b; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <!-- شاشة البحث -->
-    <div class="search-card" id="search-section">
-        <h2>📊 استعلام نتائج الطالب</h2>
-        <p>أدخل اسمك أو إيميلك المسجل للاطلاع على اللوحة الخاصة بك</p>
-        <div class="input-group">
-            <input type="text" id="student-search-input" placeholder="اكتب اسم الطالب أو الإيميل..." dir="auto">
-        </div>
-        <button class="btn-search" id="search-btn" onclick="fetchStudentResults()">عرض التقرير</button>
-        <div id="error-msg" style="color: #dc2626; font-size: 0.88rem; margin-top: 12px; display: none; background: #fee2e2; padding: 10px; border-radius: 8px;"></div>
+    <!-- البحث -->
+    <div class="search-card" id="searchSection">
+        <h2 style="color: var(--accent); margin-top: 0;">📊 بوابة نتائج الطالب</h2>
+        <p style="color: #64748b;">أدخل اسمك أو إيميل منصة مدرستي</p>
+        <input type="text" id="searchInput" placeholder="Sxxxxxxx@rb.moe.gov.sa أو اسم الطالب">
+        <button id="btnSearch" onclick="fetchData()">عرض النتائج</button>
+        <div id="errMsg" style="color: #dc2626; margin-top: 10px; font-size: 0.85rem; display: none;"></div>
     </div>
 
-    <!-- لوحة نتائج الطالب -->
-    <div class="dashboard" id="student-dashboard">
+    <!-- نتائج الطالب -->
+    <div class="dashboard" id="dashboardSection">
         <div class="header">
             <div>
-                <h1 id="student-name-display">مرحباً بك</h1>
-                <span style="color: var(--text-sub); font-size: 0.85rem;" id="student-info-display">ثانوية الأمير عبدالمجيد 😉</span>
+                <h2 id="stName" style="margin: 0; color: var(--accent);">مرحباً</h2>
+                <span style="font-size: 0.85rem; color: #64748b;">ثانوية الأمير عبدالمجيد 😉</span>
             </div>
-            <button class="btn-reset" onclick="resetSearch()">بحث عن حساب آخر 🔍</button>
+            <button onclick="location.reload()" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer;">بحث جديد 🔍</button>
         </div>
 
         <div class="stats-grid">
-            <div class="stat-card"><h3>عدد الاختبارات المكتملة</h3><p id="total-tests">0</p></div>
-            <div class="stat-card"><h3>المتوسط العام</h3><p id="avg-score">0%</p></div>
-            <div class="stat-card"><h3>أعلى نتيجة</h3><p id="max-score">0%</p></div>
+            <div class="stat-card"><h3>المختبرات المكتملة</h3><p id="stCount">0</p></div>
+            <div class="stat-card"><h3>المتوسط العام</h3><p id="stAvg">0%</p></div>
+            <div class="stat-card"><h3>أعلى نتيجة</h3><p id="stMax">0%</p></div>
         </div>
-
-        <div class="time-box">
-            <div class="time-item">
-                🕒 آخر اختبار تم تقديمه:
-                <span id="last-test-time">-</span>
-            </div>
-            <div class="time-item" style="border-right:1px solid #e2e8f0;">
-                📅 موعد الاختبار القادم:
-                <span id="next-test-time" style="color:#059669;">-</span>
-            </div>
-        </div>
-
-        <div id="trend-indicator-box" style="text-align: center;"></div>
 
         <div class="chart-box">
-            <canvas id="studentProgressChart"></canvas>
+            <canvas id="stChart"></canvas>
         </div>
 
-        <h3 style="margin-bottom: 12px; color: var(--text-main);">📋 سجل الاختبارات والتغذية الراجعة:</h3>
+        <h3>📋 سجل الاختبارات والتغذية الراجعة:</h3>
         <div class="table-box">
             <table>
                 <thead>
                     <tr>
-                        <th>اسم النموذج / الاختبار</th>
-                        <th style="text-align:center;">التاريخ والتوقيت</th>
+                        <th>النموذج</th>
+                        <th style="text-align:center;">التاريخ</th>
                         <th style="text-align:center;">الدرجة</th>
-                        <th style="text-align:center;">النسبة والتصنيف</th>
                         <th style="text-align:center;">التغذية الراجعة</th>
                     </tr>
                 </thead>
-                <tbody id="student-records-rows"></tbody>
+                <tbody id="stRows"></tbody>
             </table>
         </div>
     </div>
 </div>
 
+<!-- نافذة المراجعة -->
 <div id="review-modal">
     <div class="modal-content">
-        <h3 id="review-title" style="margin-top:0; color:var(--accent);">👁️ مراجعة إجابات الاختبار</h3>
-        <hr style="border:0; border-top:1px solid #eee; margin-bottom:15px;">
-        <div id="review-list"></div>
-        <button class="close-btn" onclick="closeReviewModal()">إغلاق التقرير</button>
+        <h3 id="revTitle">مراجعة الإجابات</h3>
+        <div id="revBody"></div>
+        <button onclick="document.getElementById('review-modal').style.display='none'" style="margin-top: 15px; padding: 8px 15px; background: #333; color: white; border: none; border-radius: 6px; cursor: pointer;">إغلاق</button>
     </div>
 </div>
 
@@ -299,207 +107,128 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
+    let studentData = [];
+    let myChart = null;
 
-    let studentLineChart = null;
-    let loadedStudentRecords = [];
+    async function fetchData() {
+        const query = document.getElementById('searchInput').value.trim().toLowerCase();
+        const err = document.getElementById('errMsg');
+        const btn = document.getElementById('btnSearch');
+        err.style.display = 'none';
 
-    async function fetchStudentResults() {
-        const rawInput = document.getElementById('student-search-input').value.trim().toLowerCase();
-        const errorDiv = document.getElementById('error-msg');
-        const searchBtn = document.getElementById('search-btn');
-
-        errorDiv.style.display = 'none';
-
-        if (!rawInput) {
-            showError("يرجى إدخال اسم الطالب أو بريده الإلكتروني.");
+        if (!query) {
+            err.innerText = "يرجى كتابة الاسم أو الإيميل أولاً.";
+            err.style.display = 'block';
             return;
         }
 
-        searchBtn.disabled = true;
-        searchBtn.innerText = "جاري جلب النتائج من السحابة...";
+        btn.innerText = "جاري البحث...";
+        btn.disabled = true;
 
-        // استخراج الأرقام من المدخل
-        let studentNumber = "";
-        const idMatch = rawInput.match(/\d+/);
-        if (idMatch) {
-            studentNumber = idMatch[0];
-        }
-
-        // تجربة أكثر من مجموعة سحابية لضمان قراءة البيانات
-        const collectionsToTry = ["alkfaeat_results", "results", "quiz_results"];
-        loadedStudentRecords = [];
+        // استخراج أرقام من الإيميل مثل S5649427 -> 5649427
+        const numMatch = query.match(/\d+/);
+        const idNum = numMatch ? numMatch[0] : "";
 
         try {
-            for (let colName of collectionsToTry) {
-                try {
-                    const snapshot = await db.collection(colName).get();
-                    if (!snapshot.empty) {
-                        snapshot.forEach(doc => {
-                            const data = doc.data();
-                            const docEmail = String(data.email || "").toLowerCase().trim();
-                            const docName = String(data.name || "").toLowerCase().trim();
+            const snap = await db.collection("alkfaeat_results").get();
+            studentData = [];
 
-                            const isMatchByEmail = docEmail && (docEmail === rawInput || docEmail.includes(rawInput));
-                            const isMatchByID = studentNumber && (docName.includes(studentNumber) || docEmail.includes(studentNumber));
-                            const isMatchByName = docName && (docName.includes(rawInput) || rawInput.includes(docName));
+            snap.forEach(doc => {
+                const d = doc.data();
+                const name = String(d.name || "").toLowerCase();
+                const email = String(d.email || "").toLowerCase();
 
-                            if (isMatchByEmail || isMatchByID || isMatchByName) {
-                                loadedStudentRecords.push({ id: doc.id, ...data });
-                            }
-                        });
-                    }
-                } catch(e) {
-                    console.log("Collection check failed for: " + colName);
+                // التحقق من الاسم أو الإيميل أو الرقم المدمج
+                if (name.includes(query) || email.includes(query) || (idNum && (name.includes(idNum) || email.includes(idNum)))) {
+                    studentData.push(d);
                 }
-            }
-
-            // ترتيب السجلات زمنياً
-            loadedStudentRecords.sort((a, b) => {
-                let tA = a.time ? (a.time.toDate ? a.time.toDate() : new Date(a.time)) : 0;
-                let tB = b.time ? (b.time.toDate ? b.time.toDate() : new Date(b.time)) : 0;
-                return tA - tB;
             });
 
-            if (loadedStudentRecords.length === 0) {
-                showError("لم يتم العثور على أي نتائج مطابقة في السحابة. يرجى تجربة كتابة **اسم الطالب** كما هو مسجل في اللوحة الرئيسية.");
-                searchBtn.disabled = false;
-                searchBtn.innerText = "عرض التقرير";
+            if (studentData.length === 0) {
+                err.innerText = "لم نتمكن من العثور على أي نتائج. **جرب كتابة اسم الطالب ثلاثياً أو رباعياً** كما هو في لوحة التحكم.";
+                err.style.display = 'block';
+                btn.innerText = "عرض النتائج";
+                btn.disabled = false;
                 return;
             }
 
-            document.getElementById('search-section').style.display = 'none';
-            document.getElementById('student-dashboard').style.display = 'block';
+            document.getElementById('searchSection').style.display = 'none';
+            document.getElementById('dashboardSection').style.display = 'block';
 
-            renderStudentDashboard(rawInput, loadedStudentRecords);
+            renderUI();
 
-        } catch (err) {
-            console.error("Firestore Error:", err);
-            showError("خطأ في الاتصال بالسحابة: " + (err.message || "تأكد من قواعد الحماية قواعد البيانات Firebase Firestore"));
+        } catch (e) {
+            console.error(e);
+            err.innerText = "خطأ في الاتصال بالسحابة: " + e.message;
+            err.style.display = 'block';
         } finally {
-            searchBtn.disabled = false;
-            searchBtn.innerText = "عرض التقرير";
+            btn.innerText = "عرض النتائج";
+            btn.disabled = false;
         }
     }
 
-    function renderStudentDashboard(searchInput, records) {
-        let studentName = records[records.length - 1].name || "عزيزي الطالب";
-        document.getElementById('student-name-display').innerText = `👤 مرحباً بك: ${studentName}`;
-        document.getElementById('student-info-display').innerText = `ثانوية الأمير عبدالمجيد - التقرير الشامل (${records.length} اختبارات)`;
+    function renderUI() {
+        let lastObj = studentData[studentData.length - 1];
+        document.getElementById('stName').innerText = "👤 مرحباً بك: " + (lastObj.name || "الطالب");
 
-        let totalScore = 0;
-        let percentages = [];
+        document.getElementById('stCount').innerText = studentData.length;
+        
+        let pcts = studentData.map(d => Math.round((d.score / d.total) * 100));
+        let avg = Math.round(pcts.reduce((a,b)=>a+b,0) / pcts.length);
+        document.getElementById('stAvg').innerText = avg + "%";
+        document.getElementById('stMax').innerText = Math.max(...pcts) + "%";
+
+        let rows = "";
         let labels = [];
-        let barColors = [];
-        let rowsHtml = "";
 
-        records.forEach((rec, index) => {
-            let mName = rec.model_id || 'الكفايات اللغوية';
-            let pct = Math.round((rec.score / rec.total) * 100);
-            let grade = getGradeInfo(pct);
-            let formattedTime = formatDateTime(rec.time);
-
-            percentages.push(pct);
+        studentData.forEach((d, idx) => {
+            let mName = d.model_id || "الكفايات اللغوية";
+            let p = Math.round((d.score / d.total) * 100);
             labels.push(mName);
-            barColors.push(grade.color);
-            totalScore += pct;
 
-            rowsHtml += `
-                <tr>
-                    <td><b>${mName}</b></td>
-                    <td style="text-align:center; color:var(--text-sub); font-size:0.85rem;">${formattedTime}</td>
-                    <td style="text-align:center; color:var(--accent); font-weight:bold;">${rec.score} من ${rec.total}</td>
-                    <td style="text-align:center;"><span style="font-weight:bold; color:${grade.color}; padding:4px 10px; background:${grade.bg}; border-radius:12px;">${pct}% (${grade.text})</span></td>
-                    <td style="text-align:center;">
-                        <button class="btn-review" onclick="openStudentReview(${index})">👁️ مراجعة الإجابات</button>
-                    </td>
-                </tr>
-            `;
+            rows += `<tr>
+                <td><b>${mName}</b></td>
+                <td style="text-align:center;">${d.time ? new Date(d.time.toDate ? d.time.toDate() : d.time).toLocaleDateString('ar-SA') : '-'}</td>
+                <td style="text-align:center; color:var(--accent); font-weight:bold;">${d.score}/${d.total} (${p}%)</td>
+                <td style="text-align:center;"><button class="btn-review" onclick="showReview(${idx})">👁️ مراجعة</button></td>
+            </tr>`;
         });
 
-        document.getElementById('student-records-rows').innerHTML = rowsHtml;
+        document.getElementById('stRows').innerHTML = rows;
 
-        let avg = Math.round(totalScore / records.length);
-        let max = Math.max(...percentages);
-
-        document.getElementById('total-tests').innerText = records.length;
-        document.getElementById('avg-score').innerText = avg + "%";
-        document.getElementById('max-score').innerText = max + "%";
-
-        let lastRecord = records[records.length - 1];
-        document.getElementById('last-test-time').innerText = formatDateTime(lastRecord.time);
-        document.getElementById('next-test-time').innerText = getNextTestTime(lastRecord.time);
-
-        const indicatorBox = document.getElementById('trend-indicator-box');
-        if (records.length > 1) {
-            let firstScore = percentages[0];
-            let lastScore = percentages[percentages.length - 1];
-            let diff = lastScore - firstScore;
-
-            if (diff > 0) {
-                indicatorBox.innerHTML = `<span class="trend-badge trend-up">📈 أداء ممتاز! لديك تقدم بمقدار +${diff}% مقارنة بأول اختبار</span>`;
-            } else if (diff < 0) {
-                indicatorBox.innerHTML = `<span class="trend-badge trend-down">📉 تراجع في المستوى بمقدار ${diff}%، واصل المراجعة لمستوى أفضل</span>`;
-            } else {
-                indicatorBox.innerHTML = `<span class="trend-badge trend-flat">➖ مستوى ثابت بمتوسط ${lastScore}%</span>`;
-            }
-        } else {
-            let singleGrade = getGradeInfo(percentages[0]);
-            indicatorBox.innerHTML = `<span class="trend-badge" style="background:${singleGrade.bg}; color:${singleGrade.color};">📌 تصنيف مستواك الحالي: ${singleGrade.text}</span>`;
-        }
-
-        drawStudentChart(labels, percentages, barColors);
-    }
-
-    function openStudentReview(recordIndex) {
-        const record = loadedStudentRecords[recordIndex];
-        if (!record) return;
-
-        const mName = record.model_id || 'الكفايات اللغوية';
-        document.getElementById('review-title').innerText = `👁️ التغذية الراجعة: نموذج (${mName})`;
-        
-        const listContainer = document.getElementById('review-list');
-        listContainer.innerHTML = "";
-
-        if (record.answers && record.answers.length > 0) {
-            record.answers.forEach((ans, idx) => {
-                const isCorrect = ans.isCorrect;
-                const card = document.createElement('div');
-                card.className = `answer-card ${isCorrect ? 'ans-correct' : 'ans-wrong'}`;
-                card.innerHTML = `
-                    <strong>السؤال ${idx + 1}: ${ans.qText || 'تفاصيل السؤال'}</strong><br>
-                    <span>إجابتك: <b>${ans.studentAns || 'غير مجاب'}</b> ${isCorrect ? '✅ (إجابة صحيحة)' : '❌ (إجابة خاطئة)'}</span><br>
-                    ${!isCorrect ? `<span style="font-weight:bold; color:#166534;">الإجابة الصحيحة: ${ans.correctAns}</span>` : ''}
-                `;
-                listContainer.appendChild(card);
-            });
-        } else {
-            listContainer.innerHTML = "<p style='text-align:center; padding:20px; color:var(--text-sub);'>لا توجد تفاصيل إجابات محفوظة لهذا النموذج.</p>";
-        }
-
-        document.getElementById('review-modal').style.display = 'flex';
-    }
-
-    function closeReviewModal() {
-        document.getElementById('review-modal').style.display = 'none';
-    }
-
-    function drawStudentChart(labels, percentages, colors) {
-        const ctx = document.getElementById('studentProgressChart').getContext('2d');
-        if (studentLineChart) studentLineChart.destroy();
-
-        studentLineChart = new Chart(ctx, {
+        // الرسم البياني
+        const ctx = document.getElementById('stChart').getContext('2d');
+        if(myChart) myChart.destroy();
+        myChart = new Chart(ctx, {
             type: labels.length === 1 ? 'bar' : 'line',
             data: {
                 labels: labels,
-                datasets: [{
-                    label: 'نسبة الإنجاز %',
-                    data: percentages,
-                    borderColor: '#0284c7',
-                    backgroundColor: labels.length === 1 ? colors : 'rgba(2, 132, 199, 0.15)',
-                    fill: true,
-                    tension: 0.3,
-                    pointRadius: 6,
-                    pointBackgroundColor: '#0284c7'
-                }]
+                datasets: [{ label: 'النسبة %', data: pcts, borderColor: '#0284c7', backgroundColor: 'rgba(2,132,199,0.2)', fill: true }]
             },
-            opti
+            options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } } }
+        });
+    }
+
+    function showReview(idx) {
+        let d = studentData[idx];
+        document.getElementById('revTitle').innerText = "👁️ مراجعة: " + (d.model_id || "الاختبار");
+        let html = "";
+
+        if (d.answers && d.answers.length > 0) {
+            d.answers.forEach((ans, i) => {
+                html += `<div class="ans-card ${ans.isCorrect ? 'correct' : 'wrong'}">
+                    <b>س ${i+1}: ${ans.qText || 'السؤال'}</b><br>
+                    إجابتك: ${ans.studentAns} ${ans.isCorrect ? '✅' : '❌'}<br>
+                    ${!ans.isCorrect ? `<span>الإجابة الصحيحة: ${ans.correctAns}</span>` : ''}
+                </div>`;
+            });
+        } else {
+            html = "<p style='text-align:center;'>لا توجد تفاصيل تفاعلية مسجلة لهذا الاختبار.</p>";
+        }
+
+        document.getElementById('revBody').innerHTML = html;
+        document.getElementById('review-modal').style.display = 'flex';
+    }
+</script>
+</body>
+</html>
