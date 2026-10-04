@@ -35,7 +35,7 @@
             margin: auto;
         }
 
-        /* شاشة البحث بالبريد الإلكتروني لمنصة مدرستي فقط */
+        /* شاشة البحث بالبريد الإلكتروني لمنصة مدرستي */
         .search-card {
             background: white;
             padding: 35px 25px;
@@ -193,10 +193,10 @@
 <body>
 
 <div class="container">
-    <!-- شاشة إدخال البريد الإلكتروني لمنصة مدرستي فقط -->
+    <!-- شاشة إدخال البريد الإلكتروني لمنصة مدرستي -->
     <div class="search-card" id="searchSection">
         <h2>🔒 بوابة نتائج الطالب</h2>
-        <p>أدخل البريد الإلكتروني (إيميل منصة مدرستي) الخـاص بك للوصول لنتائجك</p>
+        <p>أدخل البريد الإلكتروني (إيميل منصة مدرستي) الخاص بك للوصول لنتائجك</p>
         <input type="email" id="searchInput" placeholder="s********@rb.moe.gov.sa" autocomplete="off" dir="ltr">
         <button class="btn-search" id="btnSearch" onclick="fetchData()">عرض النتائج</button>
         <div id="errMsg" style="color: #dc2626; margin-top: 12px; font-size: 0.88rem; display: none; background: #fee2e2; padding: 10px; border-radius: 8px;"></div>
@@ -275,7 +275,7 @@
             return;
         }
 
-        // استخراج الرقم المدرسي من البريد (مثل 5807776) للمطابقة المرنة الدقيقة
+        // استخراج الرقم المدرسي من إيميل الطالب (مثلاً استخراج 5807776 من s5807776@rb.moe.gov.sa)
         const idMatch = rawInput.match(/\d+/);
         const studentNumber = idMatch ? idMatch[0] : "";
 
@@ -283,6 +283,23 @@
         btn.disabled = true;
 
         try {
+            // الخطوة 1: البحث في جدول الطلاب المسموح لهم (allowed_students) لمعرفة اسم الطالب المرتبط بهذا الإيميل أو الرقم
+            let matchedStudentNames = [];
+            const studentsSnap = await db.collection("allowed_students").get();
+            
+            studentsSnap.forEach(doc => {
+                const sData = doc.data();
+                const sEmail = String(sData.email || "").toLowerCase().trim();
+                const sName = String(sData.name || "").trim();
+
+                if (sEmail && (sEmail === rawInput || sEmail.includes(rawInput) || rawInput.includes(sEmail))) {
+                    if (sName) matchedStudentNames.push(sName);
+                } else if (studentNumber && sEmail.includes(studentNumber)) {
+                    if (sName) matchedStudentNames.push(sName);
+                }
+            });
+
+            // الخطوة 2: جلب كافة النتائج من مجموعة alkfaeat_results
             const snap = await db.collection("alkfaeat_results").get();
             studentData = [];
 
@@ -293,13 +310,16 @@
 
                 const isEmailMatch = docEmail && (docEmail === rawInput || docEmail.includes(rawInput) || rawInput.includes(docEmail));
                 const isNumberMatch = studentNumber && (docEmail.includes(studentNumber) || docName.includes(studentNumber));
+                
+                // مطابقة بالاسم إذا كان مستخرجاً من جدول الطلاب المرتبط بالإيميل
+                const isNameMatch = matchedStudentNames.some(name => docName === name.toLowerCase() || docName.includes(name.toLowerCase()));
 
-                if (isEmailMatch || isNumberMatch) {
+                if (isEmailMatch || isNumberMatch || isNameMatch) {
                     studentData.push(d);
                 }
             });
 
-            // ترتيب الاختبارات زمنياً
+            // ترتيب النتائج زمنياً
             studentData.sort((a, b) => {
                 let tA = a.time ? (a.time.toDate ? a.time.toDate() : new Date(a.time)) : 0;
                 let tB = b.time ? (b.time.toDate ? b.time.toDate() : new Date(b.time)) : 0;
@@ -345,7 +365,7 @@
         let labels = [];
 
         studentData.forEach((d, idx) => {
-            // جلب اسم النموذج (بما فيها النماذج أ إلى و المخزنة في model_id)
+            // جلب اسم النموذج بدقة (بما فيها النماذج أ حتى و المخزنة في model_id)
             let mName = d.model_id || d.modelName || d.testName || "نموذج عام";
             let p = Math.round((d.score / d.total) * 100);
             labels.push(mName);
@@ -366,7 +386,7 @@
 
         document.getElementById('stRows').innerHTML = rows;
 
-        // رسم بياني لتقدم أداء الطالب
+        // رسم بياني لتقدم أداء الطالب يضم كافة النماذج والاختبارات
         const ctx = document.getElementById('stChart').getContext('2d');
         if(myChart) myChart.destroy();
         myChart = new Chart(ctx, {
