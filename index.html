@@ -35,7 +35,7 @@
             margin: auto;
         }
 
-        /* شاشة البحث الإجبارية بالاسم والإيميل معاً */
+        /* شاشة البحث بالاسم الثلاثي والإيميل */
         .search-card {
             background: white;
             padding: 35px 25px;
@@ -194,7 +194,7 @@
 <body>
 
 <div class="container">
-    <!-- شاشة إدخال الاسم الثلاثي وإيميل مدرستي معاً (إجباري) -->
+    <!-- شاشة إدخال الاسم الثلاثي وإيميل مدرستي مع التحقق الإجباري -->
     <div class="search-card" id="searchSection">
         <h2>🔒 بوابة نتائج الطالب</h2>
         <p>يجب إدخال (الاسم الثلاثي) و (إيميل منصة مدرستي) معاً للوصول للنتائج</p>
@@ -271,15 +271,23 @@
     let myChart = null;
 
     async function fetchData() {
-        const nameInput = document.getElementById('inputName').value.trim().toLowerCase();
+        const nameInput = document.getElementById('inputName').value.trim();
         const emailInput = document.getElementById('inputEmail').value.trim().toLowerCase();
         const err = document.getElementById('errMsg');
         const btn = document.getElementById('btnSearch');
         err.style.display = 'none';
 
-        // التحقق من أن الحقلين معا غير فارغين
+        // 1. التحقق من وجود الحقلين معاً
         if (!nameInput || !emailInput) {
             err.innerText = "تنبيه: يجب كتابة (الاسم الثلاثي) و (إيميل منصة مدرستي) معاً للمتابعة.";
+            err.style.display = 'block';
+            return;
+        }
+
+        // 2. التحقق من أن الاسم ثلاثي فعلياً (يحتوي على 3 كلمات أو أكثر مفصولة بمسافات)
+        const nameWords = nameInput.split(/\s+/);
+        if (nameWords.length < 3) {
+            err.innerText = "تنبيه: يُرجى إدخال الاسم الثلاثي كاملاً (ثلاثة أسماء على الأقل).";
             err.style.display = 'block';
             return;
         }
@@ -291,18 +299,14 @@
             const snap = await db.collection("alkfaeat_results").get();
             studentData = [];
 
+            const formattedSearchName = nameInput.toLowerCase();
+
             snap.forEach(doc => {
                 const d = doc.data();
                 const docName = String(d.name || "").toLowerCase().trim();
-                const docEmail = String(d.email || "").toLowerCase().trim();
 
-                // شرط التطابق المزدوج: يجب أن يتطابق الاسم والإيميل معاً في السجلات المرصودة
-                let isNameMatch = docName && (docName === nameInput || docName.includes(nameInput) || nameInput.includes(docName));
-                let isEmailMatch = docEmail && (docEmail === emailInput || docEmail.includes(emailInput) || emailInput.includes(docEmail));
-
-                // ملاحظة: النماذج الستة تسجل الاسم فقط، بينما بعض الاختبارات تسجل الإيميل.
-                // لضمان عمل الشرطين معاً بدقة، نتحقق أن الاسم متطابق، وفي حال وجد الإيميل بالسجل نتحقق منه أيضاً، أو نقبل السجل إذا تطابق الاسم الثلاثي بدقة.
-                if (isNameMatch) {
+                // مطابقة الاسم الثلاثي بدقة في السجلات المرصودة
+                if (docName && (docName === formattedSearchName || docName.includes(formattedSearchName) || formattedSearchName.includes(docName))) {
                     studentData.push(d);
                 }
             });
@@ -315,7 +319,7 @@
             });
 
             if (studentData.length === 0) {
-                err.innerText = "لم نتمكن من العثور على أي نتائج مطابقة للبيانات المُدخلة. تأكد من صحة الاسم والإيميل.";
+                err.innerText = "لم نتمكن من العثور على أي نتائج مطابقة للاسم المُدخل. تأكد من صحة كتابة الاسم الثلاثي كما هو مسجل في كشوفات الأستاذ.";
                 err.style.display = 'block';
                 btn.innerText = "عرض النتائج";
                 btn.disabled = false;
@@ -339,7 +343,7 @@
 
     function renderUI(queryName) {
         let lastObj = studentData[studentData.length - 1];
-        document.getElementById('stName').innerText = "👤 مرحباً بك: " + (lastObj.name || "الطالب");
+        document.getElementById('stName').innerText = "👤 مرحباً بك: " + (lastObj.name || queryName);
         document.getElementById('stInfo').innerText = "الاسم المُدخل: " + queryName;
 
         document.getElementById('stCount').innerText = studentData.length;
