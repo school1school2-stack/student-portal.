@@ -292,9 +292,6 @@
                 const docName = String(d.name || "").toLowerCase().trim();
 
                 // 🛑 شروط المطابقة الذكية بالبريد والرقم:
-                // 1. تطابق الإيميل كاملاً بغض النظر عن الكابيتال والسمول
-                // 2. تطابق رقم الطالب المدخل مع الإيميل المخزن
-                // 3. احتواء حقل الإيميل المخزن على اسم المستخدم
                 const isEmailMatch = docEmail && (docEmail === rawInput || docEmail.includes(rawInput) || rawInput.includes(docEmail));
                 const isNumberMatch = studentNumber && (docEmail.includes(studentNumber) || docName.includes(studentNumber));
 
@@ -349,7 +346,8 @@
         let labels = [];
 
         studentData.forEach((d, idx) => {
-            let mName = d.model_id || "الكفايات اللغوية";
+            // معالجة عرض اسم النموذج بمرونة واحتياطياً إذا كان الحقل مسجلاً بأي صيغة
+            let mName = d.model_id || d.modelName || d.testName || "نموذج أ / اختبار عام";
             let p = Math.round((d.score / d.total) * 100);
             labels.push(mName);
 
@@ -398,7 +396,8 @@
 
     function showReview(idx) {
         let d = studentData[idx];
-        document.getElementById('revTitle').innerText = "👁️ التغذية الراجعة: نموذج (" + (d.model_id || "الاختبار") + ")";
+        let mName = d.model_id || d.modelName || d.testName || "الاختبار";
+        document.getElementById('revTitle').innerText = "👁️ التغذية الراجعة: (" + mName + ")";
         let html = "";
 
         if (d.answers && d.answers.length > 0) {
