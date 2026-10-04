@@ -109,7 +109,7 @@
 
     <!-- 1. اختيار النموذج الرئيسي للرصد -->
     <div class="form-group" style="background: #ecfdf5; padding: 15px; border-radius: 12px; border: 1px solid #a7f3d0;">
-        <label style="color: #065f46; font-size: 1rem; margin-bottom: 8px;">1️⃣ اختر نموذج الاختبار للرصد أو الإدخال[span_1](start_span)[span_1](end_span):</label>
+        <label style="color: #065f46; font-size: 1rem; margin-bottom: 8px;">1️⃣ اختر نموذج الاختبار للرصد أو الإدخال[cite: 3]:</label>
         <select id="modelSelector" onchange="switchModel(this.value)" style="border-color: #059669; font-weight: bold; color: #065f46;">
             <option value="modelA">نموذج أ</option>
             <option value="modelB">نموذج ب</option>
@@ -122,7 +122,7 @@
 
     <!-- 2. اختيار اسم الطالب في المقدمة -->
     <div class="form-group" style="background: #e0f2fe; padding: 15px; border-radius: 12px; border: 1px solid #bae6fd;">
-        <label style="color: #0369a1; font-size: 1rem; margin-bottom: 8px;">2️⃣ ابحث عن اسم الطالب واختاره أولاً[span_2](start_span)[span_2](end_span):</label>
+        <label style="color: #0369a1; font-size: 1rem; margin-bottom: 8px;">2️⃣ ابحث عن اسم الطالب واختاره أولاً[cite: 3]:</label>
         <div class="student-select-box">
             <input type="text" id="studentSearchInput" class="student-search-input" placeholder="اكتب اسم الطالب للبحث..." oninput="filterStudents()" onclick="showDropdown()">
             <div id="studentDropdownList" class="student-dropdown-list"></div>
@@ -131,7 +131,7 @@
 
     <!-- خيار استعراض النماذج المتاحة للطالب (متغيرة تلقائياً) -->
     <div class="form-group" id="studentModelsGroup" style="display: none; background: #fef3c7; padding: 15px; border-radius: 12px; border: 1px solid #f59e0b;">
-        <label style="color: #b45309; font-size: 1rem; margin-bottom: 8px;">📂 نماذج الاختبارات المتاحة (اختر نموذجاً لاستعراض إجابات الطالب إن وجدت)[span_3](start_span)[span_3](end_span):</label>
+        <label style="color: #b45309; font-size: 1rem; margin-bottom: 8px;">📂 نماذج الاختبارات المتاحة (اختر نموذجاً لاستعراض إجابات الطالب إن وجدت)[cite: 3]:</label>
         <select id="studentSavedModelsSelector" onchange="loadStudentSpecificModel(this.value)" style="border-color: #f59e0b; font-weight: bold; color: #b45309;">
             <!-- تُعبأ تلقائياً بالنماذج الموجودة في الكود -->
         </select>
@@ -139,7 +139,7 @@
 
     <!-- 3. نافذة التعبئة الذكية الفورية اللحظية -->
     <div class="ai-helper-box">
-        <label style="color: #047857; margin-bottom: 5px;">3️⃣ خانة إدخال الإجابات الفورية (تتوقف تلقائياً عند السؤال 20)[span_4](start_span)[span_4](end_span):</label>
+        <label style="color: #047857; margin-bottom: 5px;">3️⃣ خانة إدخال الإجابات الفورية (تتوقف تلقائياً عند السؤال 20)[cite: 3]:</label>
         <p style="font-size: 0.82rem; color: #065f46; margin-top: 0; margin-bottom: 10px;" id="inputCounterStatus">
             المنطقة مخصصة لـ 20 إجابة (المدخل حالياً: 0 / 20):
         </p>
@@ -151,33 +151,33 @@
 
     <!-- 4. تظليل إجابات الطالب اللحظية -->
     <div class="section-box" style="border-color: #10b981; background: #f0fdf4;">
-        <label style="color: #047857; margin-bottom: 8px;">4️⃣ إجابات الطالب (تتحدث لحظياً حسب الإدخال أو الضغط اليدوي)[span_5](start_span)[span_5](end_span):</label>
+        <label style="color: #047857; margin-bottom: 8px;">4️⃣ إجابات الطالب (تتحدث لحظياً حسب الإدخال أو الضغط اليدوي)[cite: 3]:</label>
         <div class="grid-columns-container" id="studentAnswersContainer"></div>
     </div>
 
     <!-- 5. مفاتيح الإجابة النموذجية المعتمدة -->
     <div class="section-box" style="border-color: #059669; background: #ecfdf5;">
-        <label style="color: #065f46; margin-bottom: 8px;">5️⃣ مفاتيح النموذج المعتمد الثابتة[span_6](start_span)[span_6](end_span):</label>
+        <label style="color: #065f46; margin-bottom: 8px;">5️⃣ مفاتيح النموذج المعتمد الثابتة[cite: 3]:</label>
         <div class="grid-columns-container" id="modelKeyContainer"></div>
     </div>
 
     <!-- بطاقة عرض النتيجة الفورية -->
     <div class="score-card">
         <h2 id="liveScoreDisplay">0 من 20 (0%)</h2>
-        <p>🎯 نتيجة الطالب الفورية بالمقارنة مع النموذج المعتمد[span_7](start_span)[span_7](end_span)</p>
+        <p>🎯 نتيجة الطالب الفورية بالمقارنة مع النموذج المعتمد[cite: 3]</p>
     </div>
 
     <!-- لوحة التغذية الراجعة المفصلة -->
     <div class="form-group">
-        <label>📖 تقرير التغذية الراجعة المفصلة (نص السؤال، إجابة الطالب، والإجابة الصحيحة)[span_8](start_span)[span_8](end_span):</label>
+        <label>📖 تقرير التغذية الراجعة المفصلة (نص السؤال، إجابة الطالب، والإجابة الصحيحة)[cite: 3]:</label>
         <div class="diff-grid" id="diffGridContainer"></div>
     </div>
 
     <!-- 6. اعتماد وإرسال -->
-    <button class="submit-btn" onclick="processAndSendToDashboard()">6️⃣ اعتماد النتيجة وإرسالها لوحة التحكم[span_9](start_span)[span_9](end_span)</button>
+    <button class="submit-btn" onclick="processAndSendToDashboard()">6️⃣ اعتماد النتيجة وإرسالها لوحة التحكم[cite: 3]</button>
 
     <div class="footer-note">
-        ✨ أ / عبدالعزيز الفيفي - ثانوية الأمير عبدالمجيد 🎓 الحقوق محفوظة 2026[span_10](start_span)[span_10](end_span)
+        ✨ أ / عبدالعزيز الفيفي - ثانوية الأمير عبدالمجيد 🎓 الحقوق محفوظة 2026[cite: 3]
     </div>
 </div>
 
