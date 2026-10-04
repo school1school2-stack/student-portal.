@@ -1,43 +1,261 @@
-async function fetchStudentFixedModels(studentName) {
-    try {
-        const snapshot = await db.collection("alkfaeat_results")
-            .where("name", "==", studentName)
-            .get();
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>أداة التصحيح والتغذية الراجعة المفصلة - ثانوية الأمير عبدالمجيد</title>
+    <!-- مكتبة Firebase للاتصال بقاعدة بيانات لوحتك -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <style>
+        :root {
+            --bg: #f8fafc; --card-bg: #ffffff; --accent: #059669;
+            --text-main: #1e293b; --text-sub: #64748b; --border: #e2e8f0;
+        }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: var(--bg); color: var(--text-main); margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .scanner-container { max-width: 950px; width: 100%; background: var(--card-bg); border-radius: 20px; padding: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 2px dashed var(--accent); position: relative; }
+        h1 { color: var(--accent); font-size: 1.5rem; text-align: center; margin-top: 0; margin-bottom: 5px; }
+        p.subtitle { text-align: center; color: var(--text-sub); font-size: 0.9rem; margin-bottom: 25px; }
+        
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-size: 0.9rem; font-weight: bold; margin-bottom: 6px; }
+        input[type="text"], select { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 0.95rem; outline: none; box-sizing: border-box; background: #fff; }
+        
+        /* قائمة اختيار الطالب الذكية */
+        .student-select-box { position: relative; width: 100%; }
+        .student-search-input { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 0.95rem; outline: none; box-sizing: border-box; background: #fff; }
+        .student-dropdown-list { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid var(--border); border-radius: 0 0 10px 10px; max-height: 180px; overflow-y: auto; z-index: 10; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .student-item { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; }
+        .student-item:hover { background: #e0f2fe; color: #0369a1; font-weight: bold; }
 
-        studentRecordsCache = {}; 
+        /* بطاقة عرض النتيجة الفورية */
+        .score-card { background: linear-gradient(135deg, #059669, #047857); color: white; border-radius: 12px; padding: 15px; text-align: center; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2); }
+        .score-card h2 { margin: 0; font-size: 1.8rem; }
+        .score-card p { margin: 5px 0 0 0; font-size: 0.95rem; opacity: 0.9; }
 
-        snapshot.forEach(doc => {
-            let record = doc.data();
-            if (record.model_id) {
-                studentRecordsCache[record.model_id] = record;
-            }
-        });
+        /* أقسام العرض بترتيب ورقة الاختبار (عمودين: اليمين 1-10، اليسار 11-20) */
+        .section-box { background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 15px; }
+        
+        .grid-columns-container { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .sub-column { display: flex; flex-direction: column; gap: 6px; }
 
-        const savedModelsSelector = document.getElementById('studentSavedModelsSelector');
-        savedModelsSelector.innerHTML = '';
+        .ans-card { background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; display: flex; justify-content: space-between; align-items: center; }
+        .ans-card span { font-size: 0.85rem; font-weight: bold; color: var(--accent); }
+        
+        /* أزرار خيارات الطالب ونموذج الإجابة (أ، ب، ج، د) */
+        .options-group { display: flex; gap: 4px; }
+        .opt-btn { background: #f1f5f9; border: 1px solid var(--border); border-radius: 4px; padding: 4px 10px; font-size: 0.8rem; font-weight: bold; cursor: pointer; color: #334155; }
+        
+        /* ألوان التمييز لخيارات الطالب */
+        .opt-btn.active-correct { background: #059669 !important; color: white !important; border-color: #059669 !important; }
+        .opt-btn.active-wrong { background: #f97316 !important; color: white !important; border-color: #f97316 !important; }
+        
+        /* أزرار نموذج الإجابة المعتمد بلون مميز وثابت */
+        .model-btn.active { background: #047857 !important; color: white !important; border-color: #047857 !important; }
 
-        // 🚀 عرض جميع النماذج المتاحة في النظام (من أ إلى و) بشكل دائم للطالب
-        Object.keys(modelsData).forEach(key => {
-            let mName = modelsData[key].name; // مثل: نموذج أ، نموذج ب، ...
-            let opt = document.createElement('option');
-            opt.value = key;
-            
-            if (studentRecordsCache[mName]) {
-                let rec = studentRecordsCache[mName];
-                opt.innerText = `${mName} (تم الحل: ${rec.score}/20 - ${Math.round((rec.score/20)*100)}%)`;
-            } else {
-                opt.innerText = `${mName} (متاح للاختبار / لم يُحل بعد)`;
-            }
-            savedModelsSelector.appendChild(opt);
-        });
+        /* لوحة التغذية الراجعة */
+        .diff-grid { display: grid; grid-template-columns: repeat(1, 1fr); gap: 8px; max-height: 280px; overflow-y: auto; background: #fff; padding: 10px; border-radius: 8px; border: 1px solid var(--border); }
+        .diff-item { padding: 12px; border-radius: 8px; font-size: 0.85rem; border: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; }
+        .diff-item.match { background: #ecfdf5; border-color: #10b981; color: #065f46; }
+        .diff-item.diff { background: #fff7ed; border-color: #f97316; color: #9a3412; }
 
-        document.getElementById('studentModelsGroup').style.display = 'block';
+        .ai-helper-box { background: #f0fdf4; border: 1px solid #10b981; border-radius: 12px; padding: 15px; margin-bottom: 15px; }
+        
+        .clear-btn { background: #ef4444; color: white; border: none; padding: 10px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.9rem; transition: 0.2s; }
+        .clear-btn:hover { background: #dc2626; }
 
-        // استعراض أول نموذج افتراضياً
-        const firstKey = Object.keys(modelsData)[0];
-        loadStudentSpecificModel(firstKey);
+        .submit-btn { width: 100%; background: #059669; color: white; border: none; padding: 14px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 1rem; transition: 0.2s; }
+        .submit-btn:hover { background: #047857; }
+        
+        /* تصميم النوافذ المنبثقة (Modals) */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 9999; }
+        
+        /* النافذة الحمراء للتحذير */
+        .alert-box-red { background: #ffffff; border: 4px solid #dc2626; border-radius: 16px; width: 90%; max-width: 450px; padding: 25px; text-align: center; box-shadow: 0 10px 25px rgba(220, 38, 38, 0.3); animation: shake 0.3s ease-in-out; }
+        .alert-box-red h3 { color: #dc2626; font-size: 1.4rem; margin-top: 0; margin-bottom: 10px; }
+        .alert-box-red p { color: #1e293b; font-size: 1rem; line-height: 1.6; margin-bottom: 20px; font-weight: bold; }
+        .alert-btn-red { background: #dc2626; color: white; border: none; padding: 10px 25px; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; transition: 0.2s; }
+        .alert-btn-red:hover { background: #b91c1c; }
 
-    } catch (error) {
-        console.error("خطأ في جلب النماذج للطالب:", error);
-    }
-}
+        /* النافذة الخضراء للنجاح والاعتماد */
+        .alert-box-green { background: #ffffff; border: 4px solid #059669; border-radius: 16px; width: 90%; max-width: 450px; padding: 25px; text-align: center; box-shadow: 0 10px 25px rgba(5, 150, 105, 0.3); animation: popUp 0.3s ease-in-out; }
+        .alert-box-green h3 { color: #059669; font-size: 1.4rem; margin-top: 0; margin-bottom: 10px; }
+        .alert-box-green p { color: #1e293b; font-size: 1rem; line-height: 1.6; margin-bottom: 20px; font-weight: bold; }
+        .alert-btn-green { background: #059669; color: white; border: none; padding: 10px 25px; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; transition: 0.2s; }
+        .alert-btn-green:hover { background: #047857; }
+
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-6px); }
+            50% { transform: translateX(6px); }
+            75% { transform: translateX(-6px); }
+            100% { transform: translateX(0); }
+        }
+
+        @keyframes popUp {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .footer-note { text-align: center; font-size: 0.75rem; color: var(--text-sub); margin-top: 20px; border-top: 1px solid var(--border); padding-top: 15px; }
+    </style>
+</head>
+<body>
+
+<div class="scanner-container">
+    <h1>📷 أداة التصحيح والتغذية الراجعة المفصلة</h1>
+    <p class="subtitle">
+        ✨ أ / عبدالعزيز الفيفي - ثانوية الأمير عبدالمجيد 🎓 2026
+    </p>
+
+    <!-- 1. اختيار النموذج الرئيسي للرصد -->
+    <div class="form-group" style="background: #ecfdf5; padding: 15px; border-radius: 12px; border: 1px solid #a7f3d0;">
+        <label style="color: #065f46; font-size: 1rem; margin-bottom: 8px;">1️⃣ اختر نموذج الاختبار للرصد أو الإدخال[span_1](start_span)[span_1](end_span):</label>
+        <select id="modelSelector" onchange="switchModel(this.value)" style="border-color: #059669; font-weight: bold; color: #065f46;">
+            <option value="modelA">نموذج أ</option>
+            <option value="modelB">نموذج ب</option>
+            <option value="modelC">نموذج ج</option>
+            <option value="modelD">نموذج 4 (د)</option>
+            <option value="modelE">نموذج 5 (هـ)</option>
+            <option value="modelF">نموذج 6 (و)</option>
+        </select>
+    </div>
+
+    <!-- 2. اختيار اسم الطالب في المقدمة -->
+    <div class="form-group" style="background: #e0f2fe; padding: 15px; border-radius: 12px; border: 1px solid #bae6fd;">
+        <label style="color: #0369a1; font-size: 1rem; margin-bottom: 8px;">2️⃣ ابحث عن اسم الطالب واختاره أولاً[span_2](start_span)[span_2](end_span):</label>
+        <div class="student-select-box">
+            <input type="text" id="studentSearchInput" class="student-search-input" placeholder="اكتب اسم الطالب للبحث..." oninput="filterStudents()" onclick="showDropdown()">
+            <div id="studentDropdownList" class="student-dropdown-list"></div>
+        </div>
+    </div>
+
+    <!-- خيار استعراض النماذج المتاحة للطالب (متغيرة تلقائياً) -->
+    <div class="form-group" id="studentModelsGroup" style="display: none; background: #fef3c7; padding: 15px; border-radius: 12px; border: 1px solid #f59e0b;">
+        <label style="color: #b45309; font-size: 1rem; margin-bottom: 8px;">📂 نماذج الاختبارات المتاحة (اختر نموذجاً لاستعراض إجابات الطالب إن وجدت)[span_3](start_span)[span_3](end_span):</label>
+        <select id="studentSavedModelsSelector" onchange="loadStudentSpecificModel(this.value)" style="border-color: #f59e0b; font-weight: bold; color: #b45309;">
+            <!-- تُعبأ تلقائياً بالنماذج الموجودة في الكود -->
+        </select>
+    </div>
+
+    <!-- 3. نافذة التعبئة الذكية الفورية اللحظية -->
+    <div class="ai-helper-box">
+        <label style="color: #047857; margin-bottom: 5px;">3️⃣ خانة إدخال الإجابات الفورية (تتوقف تلقائياً عند السؤال 20)[span_4](start_span)[span_4](end_span):</label>
+        <p style="font-size: 0.82rem; color: #065f46; margin-top: 0; margin-bottom: 10px;" id="inputCounterStatus">
+            المنطقة مخصصة لـ 20 إجابة (المدخل حالياً: 0 / 20):
+        </p>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <input type="text" id="quickPasteInput" placeholder="اكتب الحروف هنا أو ألصقها (أ ب ج د)..." style="flex: 1; padding: 10px; border: 1px solid #10b981; border-radius: 8px; font-size: 1rem;" oninput="applyInstantPaste()">
+            <button type="button" class="clear-btn" onclick="clearQuickPaste()">🗑️ تصفير الحقل</button>
+        </div>
+    </div>
+
+    <!-- 4. تظليل إجابات الطالب اللحظية -->
+    <div class="section-box" style="border-color: #10b981; background: #f0fdf4;">
+        <label style="color: #047857; margin-bottom: 8px;">4️⃣ إجابات الطالب (تتحدث لحظياً حسب الإدخال أو الضغط اليدوي)[span_5](start_span)[span_5](end_span):</label>
+        <div class="grid-columns-container" id="studentAnswersContainer"></div>
+    </div>
+
+    <!-- 5. مفاتيح الإجابة النموذجية المعتمدة -->
+    <div class="section-box" style="border-color: #059669; background: #ecfdf5;">
+        <label style="color: #065f46; margin-bottom: 8px;">5️⃣ مفاتيح النموذج المعتمد الثابتة[span_6](start_span)[span_6](end_span):</label>
+        <div class="grid-columns-container" id="modelKeyContainer"></div>
+    </div>
+
+    <!-- بطاقة عرض النتيجة الفورية -->
+    <div class="score-card">
+        <h2 id="liveScoreDisplay">0 من 20 (0%)</h2>
+        <p>🎯 نتيجة الطالب الفورية بالمقارنة مع النموذج المعتمد[span_7](start_span)[span_7](end_span)</p>
+    </div>
+
+    <!-- لوحة التغذية الراجعة المفصلة -->
+    <div class="form-group">
+        <label>📖 تقرير التغذية الراجعة المفصلة (نص السؤال، إجابة الطالب، والإجابة الصحيحة)[span_8](start_span)[span_8](end_span):</label>
+        <div class="diff-grid" id="diffGridContainer"></div>
+    </div>
+
+    <!-- 6. اعتماد وإرسال -->
+    <button class="submit-btn" onclick="processAndSendToDashboard()">6️⃣ اعتماد النتيجة وإرسالها لوحة التحكم[span_9](start_span)[span_9](end_span)</button>
+
+    <div class="footer-note">
+        ✨ أ / عبدالعزيز الفيفي - ثانوية الأمير عبدالمجيد 🎓 الحقوق محفوظة 2026[span_10](start_span)[span_10](end_span)
+    </div>
+</div>
+
+<!-- نافذة التنبيه الحمراء (للأخطاء والتنبيهات) -->
+<div id="alertModalRed" class="modal-overlay">
+    <div class="alert-box-red">
+        <h3>🚨 تنبيه هام!</h3>
+        <p id="alertModalRedText">حدث خطأ ما.</p>
+        <button type="button" class="alert-btn-red" onclick="closeModal('alertModalRed')">حسناً، فهمت</button>
+    </div>
+</div>
+
+<!-- نافذة الاعتماد الخضراء (للنجاح) -->
+<div id="alertModalGreen" class="modal-overlay">
+    <div class="alert-box-green">
+        <h3>✅ تم اعتماد النتيجة بنجاح!</h3>
+        <p id="alertModalGreenText">تم حفظ وتصدير درجة الطالب لوحة التحكم.</p>
+        <button type="button" class="alert-btn-green" onclick="closeModal('alertModalGreen')">رصد طالب جديد</button>
+    </div>
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyBkCO7FDQXd89YDf843J4_AtvEFvzzt-R0",
+        authDomain: "aztlg-494c3.firebaseapp.com",
+        projectId: "aztlg-494c3",
+        storageBucket: "aztlg-494c3.firebasestorage.app",
+        messagingSenderId: "597051893949",
+        appId: "1:597051893949:web:de5554ac900317a92b2fd4"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let allStudents = [];
+    let studentAnswersState = {};
+    let currentModelKey = 'modelA';
+    let studentRecordsCache = {}; 
+
+    const modelsData = {
+        modelA: {
+            name: "نموذج أ",
+            questions: [
+                { q: "1. أي الأداة التالية تجزم الفعل المضارع؟", options: { A: "لم", B: "كي", C: "لن", D: "لعلّ" }, ans: "A" },
+                { q: "2. جملة \"كان الطالبُ نشيطاً\"، كلمة \"نشيطاً\" تعرب:", options: { A: "حال منصوبة", B: "خبر كان منصوب بالفتحة", C: "اسم كان مرفوع", D: "مفعول به" }, ans: "B" },
+                { q: "3. الجملة المبنية للمجهول بشكل صحيح هي:", options: { A: "شَرَحَ المعلمُ الدرسَ", B: "شُرِحَ الدرسُ", C: "يُشْرَحُ المعلمُ", D: "شُرِحَ الدرسَ" }, ans: "B" },
+                { q: "4. علامة جزم الفعل المضارع معتل الآخر بـ (لم) هي:", options: { A: "ثبوت النون", B: "السكون الظاهر", C: "حذف حرف العلة", D: "الفتحة المقدرة" }, ans: "C" },
+                { q: "5. إعراب كلمة \"مجتهدٌ\" في جملة \"الطالبُ مجتهدٌ\":", options: { A: "مبتدأ مؤخر", B: "خبر مفرد مرفوع بالضمة", C: "مفعول به منصوب", D: "فاعل مرفوع بالضمة" }, ans: "B" },
+                { q: "6. الفعل المضارع \"ينجحَ\" في جملة \"اجتهدْ كي تنجحَ\" هو:", options: { A: "منصوب وعلامة نصبه الفتحة", B: "مرفوع بالضمة", C: "مبني على الفتح", D: "مجزوم بالسكون" }, ans: "A" },
+                { q: "7. الفاعل في جملة \"قرأَ الطالبُ الكتابَ\" هو:", options: { A: "الكتابَ", B: "قرأَ", C: "الطالبُ", D: "ضمير مستتر" }, ans: "C" },
+                { q: "8. نائب الفاعل في جملة \"كُوفِئَ المتفوقُ\" مرفوع وعلامة رفعه:", options: { A: "الضمة الظاهرة", B: "الفتحة", C: "ثبوت النون", D: "الألف" }, ans: "A" },
+                { q: "9. الأداة \"لن\" تؤثر في الفعل المضارع بـ:", options: { A: "الرفع", B: "الجزم", C: "النصب", D: "الجر" }, ans: "C" },
+                { q: "10. الجملة المشتملة على حرف ناسخ هي:", options: { A: "أصبح الجوُّ جميلاً", B: "صار الماءُ ثلجاً", C: "إنَّ العلمَ نورٌ", D: "كان الطالبُ نشيطاً" }, ans: "C" },
+                { q: "11. عند بناء الفعل \"كَتَبَ\" للمجهول يطابق الضبط فيصبح:", options: { A: "كُتِبَ", B: "يُكْتَبُ", C: "أُكْتِبَ", D: "كَاتَبَ" }, ans: "A" },
+                { q: "12. الفعل المضارع \"يهملوا\" في جملة \"لم يهملوا\":", options: { A: "مجزوم بحذف النون", B: "منصوب بالفتحة", C: "مجزوم بالسكون", D: "مرفوع بثبوت النون" }, ans: "A" },
+                { q: "13. الفعل المضارع المجزوم بـ (لم) بالسكون الصحيح هو:", options: { A: "لم يكتبْ", B: "لم يسعَ", C: "لم يدعُ", D: "لم يقضِ" }, ans: "A" },
+                { q: "14. \"إنَّ وأخواتها\" عند دخولها على الجملة الاسمية فإنها:", options: { A: "ترفع المبتدأ وتنصب الخبر", B: "تنصب المبتدأ وترفع الخبر", C: "ترفع المبتدأ والخبر", D: "تجزم المبتدأ والخبر" }, ans: "B" },
+                { q: "15. الضبط الصحيح لكلمة (الجو) في \"إنَّ الجوَّ جميلٌ\":", options: { A: "الجوُّ (بالضم)", B: "الجوِّ (بالكسر)", C: "الجوَّ (بالفتح)", D: "الجوٌّ (بالتنوین)" }, ans: "C" },
+                { q: "16. الفعل \"يدعو\" في جملة \"لم يدعُ المسلمُ إلا اللهَ\" مجزوم وعلامة جزمه:", options: { A: "حذف حرف العلة (الواو)", B: "السكون", C: "حذف النون", D: "الفتحة المقدرة" }, ans: "A" },
+                { q: "17. الجملة المبنية للمعلوم فيما يلي هي:", options: { A: "كُتِبَ الدرسُ", B: "حفظَ الطالبُ الدرسَ", C: "فُتِحَ البابُ", D: "كُوفِئَ المجتهدُ" }, ans: "B" },
+                { q: "18. الفعل المضارع المرفوع بالضمة الظاهرة فيما يلي:", options: { A: "لم يكتبْ", B: "لن يكتبَ", C: "يكتبُ الطالبُ", D: "يكتبون بجد" }, ans: "C" },
+                { q: "19. \"كان وأخواتها\" عند دخولها على الجملة الاسمية فإنها:", options: { A: "تنصب المبتدأ وترفع الخبر", B: "ترفع المبتدأ وتنصب الخبر", C: "تنصب المبتدأ والخبر", D: "تجزم المبتدأ والخبر" }, ans: "B" },
+                { q: "20. من الأفعال الخمسة المرفوعة بثبوت النون:", options: { A: "لن يدرسوا", B: "يدرسون", C: "لم يدرسوا", D: "ادرسوا" }, ans: "B" }
+            ]
+        },
+        modelB: {
+            name: "نموذج ب",
+            questions: [
+                { q: "1. علامة جزم الفعل المضارع معتل الآخر بـ (لم) هي:", options: { A: "السكون الظاهر", B: "ثبوت النون", C: "حذف حرف العلة", D: "الفتحة المقدرة" }, ans: "C" },
+                { q: "2. الجملة المبنية للمجهول بشكل صحيح هي:", options: { A: "شُرِحَ الدرسُ", B: "شَرَحَ المعلمُ الدرسُ", C: "شُرِحَ الدرسَ", D: "يُشْرَحُ المعلمُ" }, ans: "A" },
+                { q: "3. الفعل المضارع \"ينجحَ\" في جملة \"اجتهدْ كي تنجحَ\" هو:", options: { A: "مرفوع بالضمة", B: "منصوب وعلامة نصبه الفتحة", C: "مجزوم بالسكون", D: "مبني على الفتح" }, ans: "B" },
+                { q: "4. الجملة المشتملة على حرف ناسخ هي:", options: { A: "كان الطالبُ نشيطاً", B: "أصبح الجوُّ جميلاً", C: "إنَّ العلمَ نورٌ", D: "صار الماءُ ثلجاً" }, ans: "C" },
+                { q: "5. نائب الفاعل في جملة \"كُوفِئَ المتفوقُ\" مرفوع وعلامة رفعه:", options: { A: "الفتحة", B: "الضمة الظاهرة", C: "الألف", D: "ثبوت النون" }, ans: "B" },
+                { q: "6. إعراب كلمة \"مجتهدٌ\" في جملة \"الطالبُ مجتهدٌ\":", options: { A: "خبر مفرد مرفوع بالضمة", B: "مبتدأ مؤخر", C: "فاعل مرفوع بالضمة", D: "مفعول به منصوب" }, ans: "A" },
+                { q: "7. أي الأداة التالية تجزم الفعل المضارع؟", options: { A: "لن", B: "كي", C: "لعلّ", D: "لم" }, ans: "D" },
+                { q: "8. الفعل المضارع \"يهملوا\" في جملة \"لم يهملوا\":", options: { A: "مجزوم بحذف النون", B: "منصوب بالفتحة", C: "مرفوع بثبوت النون", D: "مجزوم بالسكون" }, ans: "A" },
+                { q: "9. الأداة \"لن\" تؤثر في الفعل المضارع بـ:", options: { A: "الجزم", B: "النصب", C: "الرفع", D: "الجر" }, ans: "B" },
+                { q: "10. عند بناء الفعل \"كَتَبَ\" للمجهول يطابق الضبط فيصبح:", options: { A: "كُتِبَ", B: "يُكْتَبُ", C: "كَاتَبَ", D: "أُكْتِبَ" }, ans: "A" },
+                { q: "11. جملة \"كان الطالبُ نشيطاً\"، كلمة \"نشيطاً\" تعرب:", options: { A: "اسم كان مرفوع", B: "حال منصوبة", C: "خبر كان منصوب بالفتحة", D: "مفعول به" }, ans: "C" },
+                { q: "12. الفاعل في جملة \"قرأَ الطالبُ الكتابَ\" هو:", options: { A: "قرأَ", B: "الطالبُ", C: "الكتابَ", D: "ضمير مستتر" }, ans: "B" },
+                { q: "13. الضبط الصحيح لكلمة (الجو) في \"إنَّ الجوَّ جميلٌ\":", options: { A: "الجوُّ (بالضم)", B: "الجوَّ (بالفتح)", C: "الجوِّ (بالكسر)", D: "الجوٌّ (بالتنوین)" }, ans: "B" },
+                { q: "14. الفعل المضارع المرفوع بالضمة الظاهرة فيما يلي:", opt
