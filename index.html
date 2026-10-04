@@ -275,7 +275,6 @@
             return;
         }
 
-        // استخراج أرقام من البريد الإلكتروني المدخل (مثل s5807776 -> 5807776)
         const idMatch = rawInput.match(/\d+/);
         const studentNumber = idMatch ? idMatch[0] : "";
 
@@ -291,7 +290,6 @@
                 const docEmail = String(d.email || "").toLowerCase().trim();
                 const docName = String(d.name || "").toLowerCase().trim();
 
-                // 🛑 شروط المطابقة الذكية بالبريد والرقم:
                 const isEmailMatch = docEmail && (docEmail === rawInput || docEmail.includes(rawInput) || rawInput.includes(docEmail));
                 const isNumberMatch = studentNumber && (docEmail.includes(studentNumber) || docName.includes(studentNumber));
 
@@ -346,8 +344,8 @@
         let labels = [];
 
         studentData.forEach((d, idx) => {
-            // معالجة عرض اسم النموذج بمرونة واحتياطياً إذا كان الحقل مسجلاً بأي صيغة
-            let mName = d.model_id || d.modelName || d.testName || "نموذج أ / اختبار عام";
+            // جلب اسم النموذج بالطريقة الديناميكية المطابقة للوحة التحكم
+            let mName = d.model_id ? d.model_id.toString() : "الجملة الاسمية";
             let p = Math.round((d.score / d.total) * 100);
             labels.push(mName);
 
@@ -396,7 +394,7 @@
 
     function showReview(idx) {
         let d = studentData[idx];
-        let mName = d.model_id || d.modelName || d.testName || "الاختبار";
+        let mName = d.model_id ? d.model_id.toString() : "الاختبار";
         document.getElementById('revTitle').innerText = "👁️ التغذية الراجعة: (" + mName + ")";
         let html = "";
 
