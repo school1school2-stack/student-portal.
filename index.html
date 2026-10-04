@@ -275,7 +275,6 @@
             return;
         }
 
-        // استخراج أرقام من البريد الإلكتروني المدخل (مثل s5807776 -> 5807776)
         const idMatch = rawInput.match(/\d+/);
         const studentNumber = idMatch ? idMatch[0] : "";
 
@@ -291,10 +290,6 @@
                 const docEmail = String(d.email || "").toLowerCase().trim();
                 const docName = String(d.name || "").toLowerCase().trim();
 
-                // 🛑 شروط المطابقة الذكية بالبريد والرقم:
-                // 1. تطابق الإيميل كاملاً بغض النظر عن الكابيتال والسمول
-                // 2. تطابق رقم الطالب المدخل مع الإيميل المخزن
-                // 3. احتواء حقل الإيميل المخزن على اسم المستخدم
                 const isEmailMatch = docEmail && (docEmail === rawInput || docEmail.includes(rawInput) || rawInput.includes(docEmail));
                 const isNumberMatch = studentNumber && (docEmail.includes(studentNumber) || docName.includes(studentNumber));
 
@@ -349,7 +344,8 @@
         let labels = [];
 
         studentData.forEach((d, idx) => {
-            let mName = d.model_id || "الكفايات اللغوية";
+            // جلب اسم النموذج بدقة واستخدام البدائل المتوفرة في قاعدة البيانات (مثل model_id أو modelName)
+            let mName = d.model_id || d.modelName || d.testName || "نموذج عام";
             let p = Math.round((d.score / d.total) * 100);
             labels.push(mName);
 
@@ -398,7 +394,8 @@
 
     function showReview(idx) {
         let d = studentData[idx];
-        document.getElementById('revTitle').innerText = "👁️ التغذية الراجعة: نموذج (" + (d.model_id || "الاختبار") + ")";
+        let mName = d.model_id || d.modelName || d.testName || "الاختبار";
+        document.getElementById('revTitle').innerText = "👁️ التغذية الراجعة: نموذج (" + mName + ")";
         let html = "";
 
         if (d.answers && d.answers.length > 0) {
@@ -406,7 +403,8 @@
                 html += `<div class="ans-card ${ans.isCorrect ? 'correct' : 'wrong'}">
                     <b>السؤال ${i+1}: ${ans.qText || 'السؤال'}</b><br>
                     <span>إجابتك: <b>${ans.studentAns || 'غير مجاب'}</b> ${ans.isCorrect ? '✅ (صح)' : '❌ (خطأ)'}</span><br>
-                    ${!ans.isCorrect ? `<span style="font-weight:bold; color:#166534;">الإجابة الصحيحة: ${ans.correctAns}</span>` : ''}
+                    ${!ans.isConsistent && !ans.isCorrect ? `<span style="font-weight:bold; color:#166534;">الإجابة الصحيحة: ${ans.correctAns}</span>` : ''}
+                    ${ans.isCorrect ? '' : `<span style="font-weight:bold; color:#166534;"><br>الإجابة الصحيحة: ${ans.correctAns}</span>`}
                 </div>`;
             });
         } else {
