@@ -35,7 +35,7 @@
             margin: auto;
         }
 
-        /* شاشة البحث بالبريد فقط */
+        /* شاشة البحث باسم الطالب أو إيميله */
         .search-card {
             background: white;
             padding: 35px 25px;
@@ -60,7 +60,6 @@
             text-align: center;
             font-size: 1rem;
             outline: none;
-            direction: ltr;
         }
         .search-card input:focus { border-color: var(--accent); }
 
@@ -193,11 +192,11 @@
 <body>
 
 <div class="container">
-    <!-- شاشة إدخال البريد الإلكتروني أو اسم الطالب -->
+    <!-- شاشة البحث -->
     <div class="search-card" id="searchSection">
         <h2>🔒 بوابة نتائج الطالب</h2>
-        <p>أدخل البريد الإلكتروني أو اسم الطالب للوصول للنتائج والتقارير</p>
-        <input type="text" id="searchInput" placeholder="اكتب اسم الطالب أو الإيميل..." autocomplete="off">
+        <p>أدخل اسم الطالب تماماً كما هو مُسجل في كشوفات الأستاذ</p>
+        <input type="text" id="searchInput" placeholder="اكتب اسم الطالب هنا..." autocomplete="off">
         <button class="btn-search" id="btnSearch" onclick="fetchData()">عرض النتائج</button>
         <div id="errMsg" style="color: #dc2626; margin-top: 12px; font-size: 0.88rem; display: none; background: #fee2e2; padding: 10px; border-radius: 8px;"></div>
     </div>
@@ -207,13 +206,13 @@
         <div class="header">
             <div>
                 <h2 id="stName">مرحباً بك</h2>
-                <span style="font-size: 0.85rem; color: var(--text-sub);" id="stEmail"></span>
+                <span style="font-size: 0.85rem; color: var(--text-sub);" id="stInfo">ثانوية الأمير عبدالمجيد</span>
             </div>
-            <button class="btn-reset" onclick="location.reload()">تسجيل خروج / بحث جديد 🔒</button>
+            <button class="btn-reset" onclick="location.reload()">بحث عن طالب آخر 🔒</button>
         </div>
 
         <div class="stats-grid">
-            <div class="stat-card"><h3>عدد الاختبارات</h3><p id="stCount">0</p></div>
+            <div class="stat-card"><h3>عدد الاختبارات المنجزة</h3><p id="stCount">0</p></div>
             <div class="stat-card"><h3>المتوسط العام</h3><p id="stAvg">0%</p></div>
             <div class="stat-card"><h3>أعلى نتيجة</h3><p id="stMax">0%</p></div>
         </div>
@@ -222,13 +221,13 @@
             <canvas id="stChart"></canvas>
         </div>
 
-        <h3 style="margin-bottom: 12px; color: var(--text-main);">📋 سجل الاختبارات (الماضية والنماذج الحالية) والتغذية الراجعة:</h3>
+        <h3 style="margin-bottom: 12px; color: var(--text-main);">📋 سجل الاختبارات والنماذج (أ حتى و) والتغذية الراجعة:</h3>
         <div class="table-box">
             <table>
                 <thead>
                     <tr>
                         <th>اسم النموذج / الاختبار</th>
-                        <th style="text-align:center;">التاريخ والتوقيت</th>
+                        <th style="text-align:center;">التاريخ والوقت</th>
                         <th style="text-align:center;">الدرجة والنسبة</th>
                         <th style="text-align:center;">التغذية الراجعة</th>
                     </tr>
@@ -264,13 +263,13 @@
     let myChart = null;
 
     async function fetchData() {
-        const rawInput = document.getElementById('searchInput').value.trim().toLowerCase();
+        const rawInput = document.getElementById('searchInput').value.trim();
         const err = document.getElementById('errMsg');
         const btn = document.getElementById('btnSearch');
         err.style.display = 'none';
 
         if (!rawInput) {
-            err.innerText = "يرجى كتابة اسم الطالب أو البريد الإلكتروني أولاً.";
+            err.innerText = "يرجى كتابة اسم الطالب أولاً.";
             err.style.display = 'block';
             return;
         }
@@ -279,24 +278,21 @@
         btn.disabled = true;
 
         try {
+            // جلب كافة السجلات والبحث بمطابقة اسم الطالب بدقة (بما فيها النماذج الستة المخزنة بـ model_id)
             const snap = await db.collection("alkfaeat_results").get();
             studentData = [];
 
             snap.forEach(doc => {
                 const d = doc.data();
-                const docEmail = String(d.email || "").toLowerCase().trim();
-                const docName = String(d.name || "").toLowerCase().trim();
+                const docName = String(d.name || "").trim();
 
-                // مطابقة شاملة ومرنة سواء بالاسم أو جزء منه أو الإيميل
-                const isMatch = (docEmail && docEmail.includes(rawInput)) || 
-                                (docName && (docName === rawInput || docName.includes(rawInput) || rawInput.includes(docName)));
-
-                if (isMatch) {
+                // مطابقة شاملة لاسم الطالب
+                if (docName && (docName.toLowerCase() === rawInput.toLowerCase() || docName.includes(rawInput))) {
                     studentData.push(d);
                 }
             });
 
-            // ترتيب الاختبارات زمنياً
+            // ترتيب النتائج زمنياً
             studentData.sort((a, b) => {
                 let tA = a.time ? (a.time.toDate ? a.time.toDate() : new Date(a.time)) : 0;
                 let tB = b.time ? (b.time.toDate ? b.time.toDate() : new Date(b.time)) : 0;
@@ -304,7 +300,7 @@
             });
 
             if (studentData.length === 0) {
-                err.innerText = "لم نتمكن من العثور على أي نتائج مسجلة بهذا الاسم أو الإيميل في السحابة.";
+                err.innerText = "لم يتم العثور على أي نتائج مسجلة بهذا الاسم في السحابة. تأكد من كتابة الاسم تماماً كما هو في أداة الرصد.";
                 err.style.display = 'block';
                 btn.innerText = "عرض النتائج";
                 btn.disabled = false;
@@ -318,7 +314,7 @@
 
         } catch (e) {
             console.error(e);
-            err.innerText = "خطأ في الاتصال بالسحابة: " + e.message;
+            err.innerText = "خطأ في الاتصال بقاعدة البيانات: " + e.message;
             err.style.display = 'block';
         } finally {
             btn.innerText = "عرض النتائج";
@@ -326,10 +322,10 @@
         }
     }
 
-    function renderUI(queryText) {
+    function renderUI(queryName) {
         let lastObj = studentData[studentData.length - 1];
-        document.getElementById('stName').innerText = "👤 اسم الطالب: " + (lastObj.name || "الطالب");
-        document.getElementById('stEmail').innerText = "البحث بـ: " + queryText;
+        document.getElementById('stName').innerText = "👤 الطالب: " + (lastObj.name || queryName);
+        document.getElementById('stInfo').innerText = "إجمالي الاختبارات المرصودة: " + studentData.length;
 
         document.getElementById('stCount').innerText = studentData.length;
         
@@ -341,8 +337,9 @@
         let rows = "";
         let labels = [];
 
+        studentData.files = studentData; // حفظ مؤقت
         studentData.forEach((d, idx) => {
-            // جلب اسم النموذج أو الاختبار بدقة من جميع الحقول المحتملة
+            // اعتماد حقل model_id الذي تخزنه أداة التصحيح والتوثيق بدقة
             let mName = d.model_id || d.modelName || d.testName || "نموذج عام";
             let p = Math.round((d.score / d.total) * 100);
             labels.push(mName);
@@ -363,7 +360,7 @@
 
         document.getElementById('stRows').innerHTML = rows;
 
-        // رسم بياني لتقدم أداء الطالب يضم كافة اختباراته الماضية والحالية
+        // رسم بياني يوضح أداء الطالب في كافة النماذج المنجزة
         const ctx = document.getElementById('stChart').getContext('2d');
         if(myChart) myChart.destroy();
         myChart = new Chart(ctx, {
@@ -400,7 +397,7 @@
             d.answers.forEach((ans, i) => {
                 html += `<div class="ans-card ${ans.isCorrect ? 'correct' : 'wrong'}">
                     <b>السؤال ${i+1}: ${ans.qText || 'السؤال'}</b><br>
-                    <span>إجابتك: <b>${ans.studentAns || 'غير مجاب'}</b> ${ans.isCorrect ? '✅ (صح)' : '❌ (خطأ)'}</span><br>
+                    <span>إجابة الطالب: <b>${ans.studentAns || 'غير مجاب'}</b> ${ans.isCorrect ? '✅ (صح)' : '❌ (خطأ)'}</span><br>
                     <span style="font-weight:bold; color:#166534;"><br>الإجابة الصحيحة: ${ans.correctAns}</span>
                 </div>`;
             });
